@@ -1,0 +1,175 @@
+{
+    "name": "Content Factory - Video Crawler",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours",
+                            "hoursInterval": 3
+                        }
+                    ]
+                }
+            },
+            "id": "trigger-schedule",
+            "name": "Every 3 Hours",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                240,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "command": "cd /D D:\\Contenfactory\\crawler && python orchestrator.py --mode channels --spreadsheet-id {{$env.SPREADSHEET_ID}}"
+            },
+            "id": "exec-channel-scan",
+            "name": "Run Channel Scan",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const output = $input.first().json.stdout || '{}';\ntry {\n  const result = JSON.parse(output);\n  return [{ json: result }];\n} catch(e) {\n  return [{ json: { raw: output, error: e.message } }];\n}"
+            },
+            "id": "parse-channel-result",
+            "name": "Parse Channel Result",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                680,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "download-video",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "webhook-manual",
+            "name": "Webhook: Manual Download",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                240,
+                520
+            ],
+            "webhookId": "content-factory-manual"
+        },
+        {
+            "parameters": {
+                "command": "cd /D D:\\Contenfactory\\crawler && python orchestrator.py --mode videos --spreadsheet-id {{$env.SPREADSHEET_ID}}"
+            },
+            "id": "exec-manual-download",
+            "name": "Run Manual Download",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                460,
+                520
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const output = $input.first().json.stdout || '{}';\ntry {\n  const result = JSON.parse(output);\n  return [{ json: { success: true, result } }];\n} catch(e) {\n  return [{ json: { success: false, error: e.message, raw: output } }];\n}"
+            },
+            "id": "parse-manual-result",
+            "name": "Parse Manual Result",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                680,
+                520
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $json }}"
+            },
+            "id": "respond-webhook",
+            "name": "Respond to Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                900,
+                520
+            ]
+        }
+    ],
+    "connections": {
+        "Every 3 Hours": {
+            "main": [
+                [
+                    {
+                        "node": "Run Channel Scan",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Channel Scan": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Channel Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook: Manual Download": {
+            "main": [
+                [
+                    {
+                        "node": "Run Manual Download",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Manual Download": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Manual Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Manual Result": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [
+        "content-factory"
+    ],
+    "triggerCount": 2,
+    "updatedAt": "2026-04-22T00:00:00.000Z",
+    "versionId": "1"
+}

@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Automation Tool</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #1877f2;
+            --success: #42b72a;
+            --dark: #18191a;
+        }
+
+        body {
+            background: #f0f2f5;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .sidebar {
+            background: var(--dark);
+            min-height: 100vh;
+            width: 220px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .sidebar .logo {
+            color: var(--primary);
+            font-size: 1.4rem;
+            font-weight: 700;
+            padding: 20px 16px 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar .logo span {
+            color: #fff;
+        }
+
+        .sidebar .nav-link {
+            color: #ccc;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin: 2px 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.92rem;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: #2d2d2d;
+            color: #fff;
+        }
+
+        .sidebar .nav-link i {
+            width: 18px;
+            text-align: center;
+        }
+
+        .main {
+            margin-left: 220px;
+            padding: 24px;
+        }
+
+        .topbar {
+            background: #fff;
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+        }
+
+        .status-pill {
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .status-pill.running {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-pill.idle {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: #fff;
+            border-bottom: 1px solid #f0f2f5;
+            border-radius: 12px 12px 0 0 !important;
+            font-weight: 600;
+            padding: 14px 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary), #4267b2);
+            color: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card.green {
+            background: linear-gradient(135deg, #42b72a, #2d8a1e);
+        }
+
+        .stat-card.orange {
+            background: linear-gradient(135deg, #f7971e, #e55d87);
+        }
+
+        .stat-card.purple {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .stat-card h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .stat-card p {
+            margin: 0;
+            opacity: 0.85;
+            font-size: 0.85rem;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .log-box {
+            background: #1e1e1e;
+            color: #00ff88;
+            font-family: monospace;
+            font-size: 0.78rem;
+            height: 300px;
+            overflow-y: auto;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .log-box p {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .badge-status {
+            font-size: 0.72rem;
+        }
+
+        .table td,
+        .table th {
+            vertical-align: middle;
+        }
+
+        .btn-xs {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+
+        .section-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        textarea.mono {
+            font-family: monospace;
+            font-size: 0.82rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo"><i class="fab fa-facebook"></i> <span>FB</span> Auto</div>
+        <nav class="mt-3">
+            <a class="nav-link active" onclick="showPage('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</a>
+            <a class="nav-link" onclick="showPage('accounts')"><i class="fas fa-users"></i> Tài khoản</a>
+            <a class="nav-link" onclick="showPage('profiles')"><i class="fas fa-browser"></i> IX Profiles</a>
+            <a class="nav-link" onclick="showPage('warmup')"><i class="fas fa-fire"></i> Nuôi TK</a>
+            <a class="nav-link" onclick="showPage('post')"><i class="fas fa-pen-to-square"></i> Đăng bài</a>
+            <a class="nav-link" onclick="showPage('interact')"><i class="fas fa-heart"></i> Tương tác</a>
+            <a class="nav-link" onclick="showPage('groups')"><i class="fas fa-layer-group"></i> Nhóm</a>
+            <a class="nav-link" onclick="showPage('fanpage')"><i class="fas fa-flag"></i> Fanpage</a>
+            <a class="nav-link" onclick="showPage('proxy')"><i class="fas fa-shield-alt"></i> Proxy</a>
+            <a class="nav-link" onclick="showPage('login')"><i class="fas fa-sign-in-alt"></i> Đăng nhập</a>
+            <a class="nav-link" onclick="showPage('logs')"><i class="fas fa-terminal"></i> Logs</a>
+        </nav>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+
+        <!-- Top bar -->
+        <div class="topbar">
+            <div>
+                <strong>Facebook Automation Tool</strong>
+                <span class="text-muted ms-2" style="font-size:0.85rem">IX Browser phải đang chạy</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Sync Mode Toggle -->
+                <div class="d-flex align-items-center gap-2"
+                    title="Bật: chạy tất cả profile cùng lúc | Tắt: chạy tuần tự từng profile">
+                    <span style="font-size:0.8rem;color:#555;font-weight:600;">⚡ Sync</span>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="sync-mode-toggle"
+                            style="cursor:pointer;width:2.5em;height:1.3em;" onchange="toggleSyncMode(this.checked)">
+                    </div>
+                    <span id="sync-mode-label" style="font-size:0.75rem;color:#999;">Tuần tự</span>
+                </div>
+                <div class="vr"></div>
+                <span id="task-pill" class="status-pill idle"><i class="fas fa-circle me-1"></i>Idle</span>
+                <button class="btn btn-sm btn-danger" onclick="stopTask()" id="stop-btn" style="display:none">
+                    <i class="fas fa-stop"></i> Dừng
+                </button>
+                <span class="text-muted" style="font-size:0.8rem" id="last-update"></span>
+            </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div class="page active" id="page-dashboard">
+            <div class="section-title"><i class="fas fa-chart-pie"></i> Tổng quan</div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h2 id="stat-accounts">0</h2>
+                        <p>Tổng tài khoản</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card green">
+                        <h2 id="stat-active">0</h2>
+                        <p>Active</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card orange">
+                        <h2 id="stat-warming">0</h2>
+                        <p>Đang nuôi</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card purple">
+                        <h2 id="stat-profiles">0</h2>
+                        <p>IX Profiles</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><i class="fas fa-rocket me-2 text-primary"></i>Chạy nhanh</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <button class="btn btn-primary w-100" onclick="quickWarmup()">
+                                <i class="fas fa-fire me-2"></i>Nuôi tất cả (Light)
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-success w-100" onclick="showPage('post')">
+                                <i class="fas fa-pen-to-square me-2"></i>Đăng bài
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-warning w-100" onclick="quickInteract()">
+                                <i class="fas fa-heart me-2"></i>Tương tác nhanh
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-secondary w-100" onclick="closeAllProfiles()">
+                                <i class="fas fa-power-off me-2"></i>Đóng tất cả browser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><i class="fas fa-terminal me-2 text-success"></i>Log thực thi</div>
+                <div class="card-body p-0">
+                    <div class="log-box" id="dash-log">
+                        <p class="text-muted">Chờ tác vụ...</p>
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="progress">
+                        <div class="progress-bar bg-primary" id="progress-bar" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACCOUNTS -->
+        <div class="page" id="page-accounts">
+            <div class="section-title"><i class="fas fa-users"></i> Quản lý tài khoản</div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Import hàng loạt</div>
+                        <div class="card-body">
+                            <p class="text-muted small">Mỗi dòng: <code>email|password</code> hoặc
+                                <code>email|password|2fa_secret|profile_id</code>
+                            </p>
+                            <textarea class="form-control mono" id="import-text" rows="6"
+                                placeholder="example@gmail.com|mypassword123&#10;user2@gmail.com|pass456|JBSWY3DPEHPK3PXP|72"></textarea>
+                            <button class="btn btn-primary mt-2 w-100" onclick="importAccounts()">
+                                <i class="fas fa-file-import me-2"></i>Import tài khoản
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Thêm 1 tài khoản</div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-6"><input class="form-control form-control-sm" id="add-email"
+                                        placeholder="Email"></div>
+                                <div class="col-6"><input class="form-control form-control-sm" id="add-pass"
+                                        type="password" placeholder="Password"></div>
+                                <div class="col-6"><input class="form-control form-control-sm" id="add-2fa"
+                                        placeholder="2FA Secret (nếu có)"></div>
+                                <div class="col-6"><input class="form-control form-control-sm" id="add-profile"
+                                        placeholder="Profile ID (IX Browser)"></div>
+                                <div class="col-12"><input class="form-control form-control-sm" id="add-note"
+                                        placeholder="Ghi chú"></div>
+                            </div>
+                            <button class="btn btn-success mt-2 w-100" onclick="addOneAccount()">
+                                <i class="fas fa-plus me-2"></i>Thêm tài khoản
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card mt-3">
+                        <div class="card-body d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm flex-fill" onclick="autoAssign()">
+                                <i class="fas fa-link me-1"></i>Auto gán Profile
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm flex-fill" onclick="loadAccounts()">
+                                <i class="fas fa-refresh me-1"></i>Tải lại
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Danh sách tài khoản</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="acc-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Email / UID</th>
+                                    <th>Profile</th>
+                                    <th>Trạng thái</th>
+                                    <th>Ngày nuôi</th>
+                                    <th>Bài đăng</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="acc-tbody">
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">Chưa có tài khoản</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROFILES -->
+        <div class="page" id="page-profiles">
+            <div class="section-title"><i class="fas fa-browser"></i> IX Browser Profiles</div>
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Danh sách profile</span>
+                    <button class="btn btn-sm btn-danger" onclick="closeAllProfiles()">
+                        <i class="fas fa-power-off me-1"></i>Đóng tất cả
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên profile</th>
+                                    <th>Site URL</th>
+                                    <th>Lần mở cuối</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="profile-tbody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">Đang tải...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WARMUP -->
+        <div class="page" id="page-warmup">
+            <div class="section-title"><i class="fas fa-fire"></i> Nuôi tài khoản</div>
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <div class="card">
+                        <div class="card-header">Cài đặt Warmup</div>
+                        <div class="card-body">
+                            <label class="form-label fw-semibold">Cường độ</label>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="intensity" id="i-light"
+                                        value="light" checked>
+                                    <label class="form-check-label" for="i-light">
+                                        🟢 <strong>Light</strong> - 1 min, 3 like, 1 search (Ngày 1-3)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="intensity" id="i-medium"
+                                        value="medium">
+                                    <label class="form-check-label" for="i-medium">
+                                        🟡 <strong>Medium</strong> - 2 min, 8 like, 3 search (Ngày 4-7)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="intensity" id="i-normal"
+                                        value="normal">
+                                    <label class="form-check-label" for="i-normal">
+                                        🔴 <strong>Normal</strong> - 3 min, 15 like, 5 search (Ngày 8+)
+                                    </label>
+                                </div>
+                            </div>
+
+                            <label class="form-label fw-semibold">Chọn tài khoản</label>
+                            <select class="form-select mb-3" id="warmup-accs" multiple style="height:120px">
+                                <option value="all" selected>-- Tất cả tài khoản --</option>
+                            </select>
+                            <small class="text-muted">Giữ Ctrl để chọn nhiều</small>
+
+                            <button class="btn btn-primary w-100 mt-3" onclick="startWarmup()" id="warmup-btn">
+                                <i class="fas fa-fire me-2"></i>Bắt đầu Warmup
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">Lịch trình tự động</div>
+                        <div class="card-body">
+                            <p class="text-muted small">Warmup sẽ tự động chạy mỗi ngày theo lịch:</p>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <label class="form-label small">Warmup lúc</label>
+                                    <input type="time" class="form-control form-control-sm" value="08:00"
+                                        id="sched-warmup">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small">Đăng bài lúc</label>
+                                    <input type="time" class="form-control form-control-sm" value="12:00"
+                                        id="sched-post">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small">Tương tác lúc</label>
+                                    <input type="time" class="form-control form-control-sm" value="18:00"
+                                        id="sched-interact">
+                                </div>
+                            </div>
+                            <div class="alert alert-info mt-3 mb-0 small">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Tính năng lịch tự động cần chạy scheduler liên tục. Dùng CLI:
+                                <code>python scheduler.py --mode all</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-7">
+                    <div class="card">
+                        <div class="card-header">Giới hạn an toàn mỗi ngày</div>
+                        <div class="card-body">
+                            <div class="row g-2 text-center">
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <div class="fw-bold fs-4 text-primary">50</div><small
+                                            class="text-muted">Likes</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <div class="fw-bold fs-4 text-success">10</div><small
+                                            class="text-muted">Comments</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <div class="fw-bold fs-4 text-warning">20</div><small class="text-muted">Kết
+                                            bạn</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <div class="fw-bold fs-4 text-info">5</div><small class="text-muted">Đăng
+                                            bài</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <div class="fw-bold fs-4 text-danger">5</div><small class="text-muted">Join
+                                            group</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <div class="fw-bold fs-4 text-secondary">10</div><small
+                                            class="text-muted">Follow page</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Log Warmup</div>
+                        <div class="card-body p-0">
+                            <div class="log-box" id="warmup-log">
+                                <p class="text-muted">Chờ tác vụ...</p>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white">
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" id="warmup-progress" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- POST -->
+        <div class="page" id="page-post">
+            <div class="section-title"><i class="fas fa-pen-to-square"></i> Đăng bài tự động</div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Nội dung bài đăng</div>
+                        <div class="card-body">
+                            <label class="form-label fw-semibold">Loại bài đăng</label>
+                            <select class="form-select mb-3" id="post-type" onchange="toggleTargetUrl()">
+                                <option value="timeline">📝 Timeline cá nhân</option>
+                                <option value="group">👥 Group</option>
+                                <option value="fanpage">📢 Fanpage</option>
+                            </select>
+
+                            <div id="target-url-wrap" style="display:none" class="mb-3">
+                                <label class="form-label fw-semibold">URL Group / Fanpage</label>
+                                <input class="form-control" id="post-target"
+                                    placeholder="https://www.facebook.com/groups/xxxxx">
+                            </div>
+
+                            <label class="form-label fw-semibold">
+                                Nội dung
+                                <span class="badge bg-secondary ms-1">Spin: {option1|option2}</span>
+                            </label>
+                            <textarea class="form-control mono" id="post-content" rows="6"
+                                placeholder="Chào buổi sáng! {Hôm nay thật tuyệt vời|Chúc một ngày tốt lành|Bắt đầu ngày mới thật năng động} {😊|🌟|👍}&#10;&#10;#morning #motivation"></textarea>
+                            <small class="text-muted">Dùng {lựa chọn 1|lựa chọn 2} để spin content tự động</small>
+
+                            <button class="btn btn-success w-100 mt-3" onclick="startPost()" id="post-btn">
+                                <i class="fas fa-paper-plane me-2"></i>Đăng bài ngay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Tùy chọn nâng cao</div>
+                        <div class="card-body">
+                            <div class="alert alert-warning small">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Chỉ đăng cho tài khoản có trạng thái <strong>Active</strong>
+                            </div>
+                            <label class="form-label fw-semibold">Ví dụ spin content</label>
+                            <div class="bg-light rounded p-3 small">
+                                <p class="mb-1"><strong>Input:</strong> Chào {thế giới|mọi người|bạn bè}!</p>
+                                <p class="mb-0"><strong>Output:</strong> Chào bạn bè!</p>
+                            </div>
+                            <hr>
+                            <label class="form-label fw-semibold">Delay giữa các tài khoản</label>
+                            <div class="input-group mb-3">
+                                <input type="number" class="form-control" value="10" min="5" id="post-delay">
+                                <span class="input-group-text">- <input type="number" class="form-control border-0"
+                                        value="30" style="width:60px"> giây</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Log đăng bài</div>
+                        <div class="card-body p-0">
+                            <div class="log-box" id="post-log">
+                                <p class="text-muted">Chờ tác vụ...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- INTERACT -->
+        <div class="page" id="page-interact">
+            <div class="section-title"><i class="fas fa-heart"></i> Tương tác tự động</div>
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <div class="card">
+                        <div class="card-header">Cài đặt tương tác</div>
+                        <div class="card-body">
+                            <label class="form-label fw-semibold">Hashtag để Like</label>
+                            <input class="form-control mb-1" id="int-hashtags" placeholder="travel, food, technology"
+                                value="travel, food, technology">
+                            <small class="text-muted d-block mb-3">Cách nhau bằng dấu phẩy</small>
+
+                            <label class="form-label fw-semibold">URL Groups để tương tác</label>
+                            <textarea class="form-control mono mb-1" id="int-groups" rows="3"
+                                placeholder="https://www.facebook.com/groups/xxxxx&#10;https://www.facebook.com/groups/yyyyy"></textarea>
+                            <small class="text-muted d-block mb-3">Mỗi dòng 1 URL group</small>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small">Like/hashtag</label>
+                                    <input type="number" class="form-control form-control-sm" value="3" min="1" max="10"
+                                        id="int-like-per">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">Comment/group</label>
+                                    <input type="number" class="form-control form-control-sm" value="2" min="0" max="5"
+                                        id="int-cmt-per">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">Kết bạn/phiên</label>
+                                    <input type="number" class="form-control form-control-sm" value="3" min="0" max="10"
+                                        id="int-friends">
+                                </div>
+                            </div>
+
+                            <button class="btn btn-warning w-100" onclick="startInteract()" id="interact-btn">
+                                <i class="fas fa-heart me-2"></i>Bắt đầu tương tác
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-7">
+                    <div class="card">
+                        <div class="card-header">Các loại tương tác</div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="border rounded p-3 text-center">
+                                        <i class="fas fa-thumbs-up fa-2x text-primary mb-2"></i>
+                                        <div class="fw-bold">Like bài viết</div>
+                                        <small class="text-muted">Tìm theo hashtag, trang cá nhân, group</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-3 text-center">
+                                        <i class="fas fa-comment fa-2x text-success mb-2"></i>
+                                        <div class="fw-bold">Comment</div>
+                                        <small class="text-muted">Bình luận ngắn tự nhiên trong group</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-3 text-center">
+                                        <i class="fas fa-user-plus fa-2x text-warning mb-2"></i>
+                                        <div class="fw-bold">Kết bạn</div>
+                                        <small class="text-muted">Gửi lời mời từ gợi ý Facebook</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-3 text-center">
+                                        <i class="fas fa-search fa-2x text-info mb-2"></i>
+                                        <div class="fw-bold">Tìm kiếm</div>
+                                        <small class="text-muted">Search từ khóa ngẫu nhiên</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Log tương tác</div>
+                        <div class="card-body p-0">
+                            <div class="log-box" id="interact-log">
+                                <p class="text-muted">Chờ tác vụ...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GROUPS -->
+        <div class="page" id="page-groups">
+            <div class="section-title"><i class="fas fa-layer-group"></i> Quản lý Nhóm</div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">Chia nhóm tự động</div>
+                        <div class="card-body">
+                            <label class="form-label fw-semibold">Số profile mỗi nhóm</label>
+                            <div class="input-group mb-3">
+                                <input type="number" class="form-control" id="group-size" value="5" min="1" max="20">
+                                <span class="input-group-text">profile/nhóm</span>
+                            </div>
+                            <button class="btn btn-primary w-100 mb-2" onclick="autoAssignGroups()">
+                                <i class="fas fa-magic me-2"></i>Tự động chia nhóm
+                            </button>
+                            <button class="btn btn-outline-secondary w-100" onclick="loadGroups()">
+                                <i class="fas fa-refresh me-1"></i>Tải lại
+                            </button>
+                            <hr>
+                            <div class="alert alert-info small mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Hệ thống sẽ chia đều tài khoản vào các nhóm theo thứ tự. VD: 10 TK → Nhóm 1 (1-5), Nhóm
+                                2 (6-10)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">Chạy tác vụ theo nhóm</div>
+                        <div class="card-body">
+                            <label class="form-label fw-semibold">Tác vụ</label>
+                            <select class="form-select mb-2" id="group-task-type">
+                                <option value="login">🔑 Đăng nhập</option>
+                                <option value="warmup">🔥 Nuôi tài khoản</option>
+                                <option value="interact">❤️ Tương tác</option>
+                                <option value="post">✏️ Đăng bài</option>
+                            </select>
+
+                            <label class="form-label fw-semibold">Chọn nhóm để chạy</label>
+                            <select class="form-select mb-2" id="group-select" multiple style="height:100px">
+                                <option value="all" selected>-- Tất cả nhóm --</option>
+                            </select>
+                            <small class="text-muted d-block mb-2">Giữ Ctrl để chọn nhiều nhóm</small>
+
+                            <label class="form-label fw-semibold">Delay giữa các nhóm</label>
+                            <div class="input-group mb-3">
+                                <input type="number" class="form-control" id="group-delay" value="60" min="10">
+                                <span class="input-group-text">giây</span>
+                            </div>
+
+                            <div id="group-warmup-opts" style="display:none" class="mb-3">
+                                <label class="form-label fw-semibold small">Cường độ warmup</label>
+                                <select class="form-select form-select-sm" id="group-intensity">
+                                    <option value="light">🟢 Light</option>
+                                    <option value="medium">🟡 Medium</option>
+                                    <option value="normal">🔴 Normal</option>
+                                </select>
+                            </div>
+
+                            <button class="btn btn-success w-100" onclick="startGroupTask()">
+                                <i class="fas fa-play me-2"></i>Bắt đầu chạy theo nhóm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Danh sách nhóm</span>
+                            <span id="group-summary-text" class="text-muted small"></span>
+                        </div>
+                        <div class="card-body p-0" id="groups-container">
+                            <div class="p-3 text-muted text-center">Đang tải...</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">Log chạy nhóm</div>
+                        <div class="card-body p-0">
+                            <div class="log-box" id="group-log" style="height:250px">
+                                <p class="text-muted">Chờ tác vụ...</p>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white">
+                            <div class="progress">
+                                <div class="progress-bar bg-success" id="group-progress" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROXY -->
+        <div class="page" id="page-proxy">
+            <div class="section-title"><i class="fas fa-shield-alt"></i> Quản lý Proxy</div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Danh sách Proxy</div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Mỗi dòng 1 proxy. Hỗ trợ định dạng:<br>
+                                <code>http://host:port</code><br>
+                                <code>http://user:pass@host:port</code><br>
+                                <code>socks5://host:port</code>
+                            </p>
+                            <textarea class="form-control mono" id="proxy-text" rows="14"
+                                placeholder="http://proxy1.example.com:8080&#10;http://user:pass@proxy2.example.com:3128&#10;socks5://proxy3.example.com:1080"></textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button class="btn btn-primary flex-fill" onclick="saveProxies()">
+                                    <i class="fas fa-save me-1"></i>Lưu proxy
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="loadProxies()">
+                                    <i class="fas fa-refresh me-1"></i>Tải lại
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Kiểm tra proxy</div>
+                        <div class="card-body">
+                            <label class="form-label fw-semibold">Nhập proxy cần test</label>
+                            <input class="form-control mb-2" id="test-proxy-input"
+                                placeholder="http://user:pass@host:port">
+                            <button class="btn btn-warning w-100 mb-3" onclick="testOneProxy()">
+                                <i class="fas fa-vial me-2"></i>Test proxy này
+                            </button>
+                            <div id="test-proxy-result" class="alert alert-secondary small" style="display:none"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Danh sách proxy đã tải</div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height:300px;overflow-y:auto">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Proxy</th>
+                                            <th>Test</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="proxy-list-tbody">
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-3">Chưa tải</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOGIN -->
+        <div class="page" id="page-login">
+            <div class="section-title"><i class="fas fa-sign-in-alt"></i> Đăng nhập tự động</div>
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <div class="card">
+                        <div class="card-header">Cài đặt đăng nhập</div>
+                        <div class="card-body">
+                            <div class="alert alert-info small mb-3">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Chỉ đăng nhập cho tài khoản có trạng thái <strong>new / warming / active</strong> và đã
+                                gán IX Profile
+                            </div>
+
+                            <label class="form-label fw-semibold">Chọn tài khoản</label>
+                            <select class="form-select mb-3" id="login-accs" multiple style="height:160px">
+                                <option value="all" selected>-- Tất cả tài khoản đủ điều kiện --</option>
+                            </select>
+                            <small class="text-muted d-block mb-3">Giữ Ctrl để chọn nhiều</small>
+
+                            <label class="form-label fw-semibold">Phương thức đăng nhập</label>
+                            <select class="form-select mb-3" id="login-method">
+                                <option value="password">🔑 Email + Password</option>
+                                <option value="cookie">🍪 Cookie (nếu có)</option>
+                            </select>
+
+                            <label class="form-label fw-semibold">Delay giữa các tài khoản</label>
+                            <div class="input-group mb-3">
+                                <input type="number" class="form-control" value="15" min="10" id="login-delay">
+                                <span class="input-group-text">giây</span>
+                            </div>
+
+                            <button class="btn btn-success w-100" onclick="startLoginBatch()" id="login-btn">
+                                <i class="fas fa-sign-in-alt me-2"></i>Bắt đầu đăng nhập
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">Lưu ý quan trọng</div>
+                        <div class="card-body">
+                            <ul class="small text-muted mb-0">
+                                <li>IX Browser phải đang chạy</li>
+                                <li>Profile đã được gán cho từng tài khoản</li>
+                                <li>Nếu có 2FA, hệ thống tự xử lý TOTP</li>
+                                <li>Tài khoản login thành công sẽ chuyển sang trạng thái <strong>warming</strong></li>
+                                <li>Không đóng IX Browser trong khi đăng nhập</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-7">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <span>Kết quả đăng nhập</span>
+                            <span id="login-stats" class="text-muted small"></span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height:280px;overflow-y:auto">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Email</th>
+                                            <th>Profile</th>
+                                            <th>Kết quả</th>
+                                            <th>Ghi chú</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="login-result-tbody">
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">Chưa có kết quả</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white">
+                            <div class="progress">
+                                <div class="progress-bar bg-success" id="login-progress" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Log đăng nhập</div>
+                        <div class="card-body p-0">
+                            <div class="log-box" id="login-log" style="height:280px">
+                                <p class="text-muted">Chờ tác vụ...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FANPAGE -->
+        <div class="page" id="page-fanpage">
+            <div class="section-title"><i class="fas fa-flag"></i> Quản lý Fanpage</div>
+            <div class="row g-3">
+                <div class="col-md-4">
+
+                    <!-- Thêm page thủ công -->
+                    <div class="card">
+                        <div class="card-header">Thêm Page (thủ công)</div>
+                        <div class="card-body">
+                            <input class="form-control form-control-sm mb-2" id="fp-name" placeholder="Tên Page *">
+                            <input class="form-control form-control-sm mb-2" id="fp-url"
+                                placeholder="URL Page (facebook.com/...)">
+                            <input class="form-control form-control-sm mb-2" id="fp-pageid"
+                                placeholder="Page ID (nếu biết)">
+                            <input class="form-control form-control-sm mb-2" id="fp-owner"
+                                placeholder="Owner UID (fb_uid của acc chủ)">
+                            <select class="form-select form-select-sm mb-2" id="fp-category">
+                                <option value="public_figure">👤 Nhân vật công cộng</option>
+                                <option value="entertainment">🎭 Giải trí</option>
+                                <option value="news_media">📰 Tin tức</option>
+                                <option value="education">📚 Giáo dục</option>
+                                <option value="sports">⚽ Thể thao</option>
+                                <option value="music">🎵 Âm nhạc</option>
+                                <option value="food">🍜 Ẩm thực</option>
+                                <option value="travel">✈️ Du lịch</option>
+                                <option value="health">💪 Sức khỏe</option>
+                                <option value="technology">💻 Công nghệ</option>
+                            </select>
+                            <textarea class="form-control form-control-sm mb-2" id="fp-desc" rows="2"
+                                placeholder="Mô tả page..."></textarea>
+                            <button class="btn btn-primary btn-sm w-100" onclick="addPageManual()">
+                                <i class="fas fa-plus me-1"></i>Thêm page
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tạo page tự động -->
+                    <div class="card">
+                        <div class="card-header">Tạo Page tự động (IX Browser)</div>
+                        <div class="card-body">
+                            <div class="alert alert-warning small mb-2">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Acc phải đã login sẵn trong IX Browser
+                            </div>
+                            <input class="form-control form-control-sm mb-2" id="fp-auto-profile"
+                                placeholder="Profile ID (IX Browser)">
+                            <input class="form-control form-control-sm mb-2" id="fp-auto-name" placeholder="Tên Page *">
+                            <input class="form-control form-control-sm mb-2" id="fp-auto-owner" placeholder="Owner UID">
+                            <select class="form-select form-select-sm mb-2" id="fp-auto-category">
+                                <option value="public_figure">👤 Nhân vật công cộng</option>
+                                <option value="entertainment">🎭 Giải trí</option>
+                            </select>
+                            <textarea class="form-control form-control-sm mb-2" id="fp-auto-desc" rows="2"
+                                placeholder="Mô tả page..."></textarea>
+                            <button class="btn btn-success btn-sm w-100" onclick="createPageAuto()">
+                                <i class="fas fa-magic me-1"></i>Tự động tạo page
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Add Editor -->
+                    <div class="card">
+                        <div class="card-header">Add Editor / Admin</div>
+                        <div class="card-body">
+                            <input class="form-control form-control-sm mb-2" id="fp-ed-profile"
+                                placeholder="Profile ID acc chủ page">
+                            <input class="form-control form-control-sm mb-2" id="fp-ed-pageurl"
+                                placeholder="URL Fanpage">
+                            <input class="form-control form-control-sm mb-2" id="fp-ed-email"
+                                placeholder="Email acc cần add">
+                            <select class="form-select form-select-sm mb-2" id="fp-ed-role">
+                                <option value="editor">Editor</option>
+                                <option value="admin">Admin</option>
+                                <option value="moderator">Moderator</option>
+                                <option value="advertiser">Advertiser</option>
+                            </select>
+                            <button class="btn btn-warning btn-sm w-100" onclick="addEditorTask()">
+                                <i class="fas fa-user-plus me-1"></i>Add Editor
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <!-- Đăng bài / Reel -->
+                    <div class="card">
+                        <div class="card-header">Đăng bài / Reel lên Page</div>
+                        <div class="card-body">
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Loại nội dung</label>
+                                    <select class="form-select form-select-sm" id="fp-post-type"
+                                        onchange="togglePagePostFields()">
+                                        <option value="post">📝 Bài viết</option>
+                                        <option value="reel">🎬 Reel (Video)</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Đăng cho page nào</label>
+                                    <select class="form-select form-select-sm" id="fp-post-target-mode">
+                                        <option value="all">Tất cả page active</option>
+                                        <option value="selected">Chọn page cụ thể</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div id="fp-post-fields">
+                                <textarea class="form-control mono mb-2" id="fp-content" rows="4"
+                                    placeholder="Nội dung bài đăng... Dùng {lựa chọn 1|lựa chọn 2} để spin"></textarea>
+                            </div>
+                            <div id="fp-reel-fields" style="display:none">
+                                <input class="form-control form-control-sm mb-2" id="fp-video-path"
+                                    placeholder="Đường dẫn video .mp4 (VD: D:\videos\reel1.mp4)">
+                                <textarea class="form-control mono mb-2" id="fp-caption" rows="3"
+                                    placeholder="Caption / mô tả Reel... Hỗ trợ {spin|content}"></textarea>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary flex-fill" onclick="postToPages()">
+                                    <i class="fas fa-paper-plane me-1"></i>Đăng ngay
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="loadPages()">
+                                    <i class="fas fa-refresh me-1"></i>Tải lại
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Log -->
+                    <div class="card">
+                        <div class="card-header">Log Fanpage</div>
+                        <div class="card-body p-0">
+                            <div class="log-box" id="fanpage-log" style="height:220px">
+                                <p class="text-muted">Chờ tác vụ...</p>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white">
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" id="fanpage-progress" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danh sách Page -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Danh sách Fanpage</span>
+                            <span id="fp-count-text" class="text-muted small"></span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height:400px;overflow-y:auto">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tên Page</th>
+                                            <th>Loại</th>
+                                            <th>Owner</th>
+                                            <th>Bài/Reel</th>
+                                            <th>Editors</th>
+                                            <th>Trạng thái</th>
+                                            <th>Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fp-tbody">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-4">Chưa có fanpage</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOGS -->
+        <div class="page" id="page-logs">
+            <div class="section-title"><i class="fas fa-terminal"></i> Logs hệ thống</div>
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <span>scheduler.log</span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadFileLogs()">
+                        <i class="fas fa-refresh me-1"></i>Tải lại
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="log-box" id="file-log" style="height:500px">
+                        <p class="text-muted">Đang tải...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- end main -->
+
+    <!-- Toast -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+        <div id="toast" class="toast align-items-center text-bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body" id="toast-msg">OK</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ─── Utils ───
+        function showToast(msg, type = 'success') {
+            const el = document.getElementById('toast');
+            el.className = `toast align-items-center text-bg-${type} border-0`;
+            document.getElementById('toast-msg').textContent = msg;
+            new bootstrap.Toast(el, { delay: 3000 }).show();
+        }
+
+        function showPage(name) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + name).classList.add('active');
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+            if (name === 'accounts') loadAccounts();
+            if (name === 'profiles') loadProfiles();
+            if (name === 'logs') loadFileLogs();
+            if (name === 'proxy') loadProxies();
+            if (name === 'login') loadLoginAccounts();
+            if (name === 'groups') loadGroups();
+        }
+
+        function appendLog(boxId, msg) {
+            const box = document.getElementById(boxId);
+            const p = document.createElement('p');
+            p.textContent = msg;
+            box.appendChild(p);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function clearLog(boxId) {
+            document.getElementById(boxId).innerHTML = '';
+        }
+
+        // ─── Status Polling ───
+        let pollInterval;
+        function startPolling() {
+            pollInterval = setInterval(async () => {
+                const r = await fetch('/api/status').then(x => x.json());
+                const pill = document.getElementById('task-pill');
+                const stopBtn = document.getElementById('stop-btn');
+                if (r.running) {
+                    pill.className = 'status-pill running';
+                    pill.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i>${r.task}...`;
+                    stopBtn.style.display = 'inline-block';
+                } else {
+                    pill.className = 'status-pill idle';
+                    pill.innerHTML = '<i class="fas fa-circle me-1"></i>Idle';
+                    stopBtn.style.display = 'none';
+                }
+                if (r.last_updated) document.getElementById('last-update').textContent = r.last_updated;
+
+                // Update logs
+                if (r.logs && r.logs.length > 0) {
+                    const boxes = ['dash-log', 'warmup-log', 'post-log', 'interact-log'];
+                    boxes.forEach(b => {
+                        const box = document.getElementById(b);
+                        box.innerHTML = r.logs.map(l => `<p>${l}</p>`).join('');
+                        box.scrollTop = box.scrollHeight;
+                    });
+                }
+
+                // Update progress
+                const pct = r.progress || 0;
+                document.getElementById('progress-bar').style.width = pct + '%';
+                document.getElementById('warmup-progress').style.width = pct + '%';
+            }, 2000);
+        }
+
+        async function loadSummary() {
+            const r = await fetch('/api/summary').then(x => x.json());
+            document.getElementById('stat-accounts').textContent = r.total_accounts || 0;
+            document.getElementById('stat-active').textContent = (r.status_count || {}).active || 0;
+            document.getElementById('stat-warming').textContent = (r.status_count || {}).warming || 0;
+            document.getElementById('stat-profiles').textContent = r.total_profiles || 0;
+        }
+
+        // ─── Accounts ───
+        async function loadAccounts() {
+            const accs = await fetch('/api/accounts').then(r => r.json());
+            const tbody = document.getElementById('acc-tbody');
+            const warmupSel = document.getElementById('warmup-accs');
+
+            if (!accs || accs.error || accs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Chưa có tài khoản</td></tr>';
+                return;
+            }
+
+            // Update warmup select
+            warmupSel.innerHTML = '<option value="all" selected>-- Tất cả tài khoản --</option>';
+            accs.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.fb_uid; opt.textContent = a.fb_uid;
+                warmupSel.appendChild(opt);
+            });
+
+            const statusColors = { active: 'success', warming: 'warning', new: 'secondary', checkpoint: 'danger', die: 'dark' };
+            tbody.innerHTML = accs.map(a => `
+    <tr>
+      <td>
+        <div class="fw-semibold">${a.name || a.fb_uid}</div>
+        <small class="text-muted">${a.email || ''}</small>
+      </td>
+      <td><span class="badge bg-secondary">${a.profile_id || '-'}</span></td>
+      <td>
+        <select class="form-select form-select-sm" style="width:130px" onchange="setAccStatus('${a.fb_uid}', this.value)">
+          ${['new', 'warming', 'active', 'checkpoint', 'die'].map(s =>
+                `<option value="${s}" ${a.status === s ? 'selected' : ''}>${s}</option>`
+            ).join('')}
+        </select>
+      </td>
+      <td>${a.warm_up_days || 0} ngày</td>
+      <td>${a.post_count || 0}</td>
+      <td>
+        <button class="btn btn-xs btn-danger" onclick="deleteAcc('${a.fb_uid}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+        }
+
+        async function importAccounts() {
+            const text = document.getElementById('import-text').value;
+            if (!text.trim()) return showToast('Nhập dữ liệu trước', 'warning');
+            const r = await fetch('/api/accounts/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) }).then(x => x.json());
+            if (r.success) { showToast(`Import thành công ${r.count} tài khoản`); loadAccounts(); loadSummary(); }
+            else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        async function addOneAccount() {
+            const data = {
+                fb_uid: document.getElementById('add-email').value.split('@')[0],
+                name: document.getElementById('add-email').value,
+                email: document.getElementById('add-email').value,
+                password: document.getElementById('add-pass').value,
+                two_fa_secret: document.getElementById('add-2fa').value,
+                profile_id: document.getElementById('add-profile').value || null,
+                note: document.getElementById('add-note').value,
+            };
+            if (!data.email) return showToast('Nhập email trước', 'warning');
+            const r = await fetch('/api/accounts/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(x => x.json());
+            if (r.success) { showToast('Đã thêm tài khoản'); loadAccounts(); loadSummary(); }
+            else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        async function deleteAcc(uid) {
+            if (!confirm('Xóa tài khoản ' + uid + '?')) return;
+            await fetch(`/api/accounts/delete/${uid}`, { method: 'DELETE' });
+            loadAccounts(); loadSummary();
+        }
+
+        async function setAccStatus(uid, status) {
+            await fetch(`/api/accounts/status/${uid}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+            showToast('Cập nhật trạng thái OK');
+        }
+
+        async function autoAssign() {
+            const r = await fetch('/api/accounts/auto-assign', { method: 'POST' }).then(x => x.json());
+            showToast(`Auto-assign: ${r.assigned} profile gán thành công`);
+            loadAccounts();
+        }
+
+        // ─── Profiles ───
+        async function loadProfiles() {
+            const profiles = await fetch('/api/profiles').then(r => r.json());
+            const tbody = document.getElementById('profile-tbody');
+            if (!profiles || profiles.error || profiles.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Không có profile</td></tr>';
+                return;
+            }
+            tbody.innerHTML = profiles.map(p => {
+                const opened = p.last_open_time > 0;
+                const lastTime = p.last_open_time > 0 ? new Date(p.last_open_time * 1000).toLocaleString('vi') : '-';
+                return `
+    <tr>
+      <td><span class="badge bg-primary">${p.profile_id}</span></td>
+      <td>${p.name}</td>
+      <td><small>${p.site_url || ''}</small></td>
+      <td><small>${lastTime}</small></td>
+      <td>
+        <button class="btn btn-xs btn-success me-1" onclick="openProfile(${p.profile_id})">
+          <i class="fas fa-play"></i> Mở
+        </button>
+        <button class="btn btn-xs btn-secondary me-1" onclick="closeProfile(${p.profile_id})">
+          <i class="fas fa-stop"></i> Đóng
+        </button>
+        <button class="btn btn-xs btn-outline-primary" onclick="randomFP(${p.profile_id})">
+          <i class="fas fa-random"></i> FP
+        </button>
+      </td>
+    </tr>`
+            }).join('');
+        }
+
+        async function openProfile(id) {
+            const r = await fetch(`/api/profiles/open/${id}`, { method: 'POST' }).then(x => x.json());
+            showToast(r.success ? `Đã mở profile ${id}` : 'Lỗi: ' + r.error, r.success ? 'success' : 'danger');
+        }
+
+        async function closeProfile(id) {
+            await fetch(`/api/profiles/close/${id}`, { method: 'POST' });
+            showToast(`Đã đóng profile ${id}`);
+        }
+
+        async function closeAllProfiles() {
+            await fetch('/api/profiles/close-all', { method: 'POST' });
+            showToast('Đã đóng tất cả profile');
+        }
+
+        async function randomFP(id) {
+            const r = await fetch(`/api/profiles/randomize/${id}`, { method: 'POST' }).then(x => x.json());
+            showToast(r.success ? `Đã đổi fingerprint profile ${id}` : 'Lỗi', r.success ? 'success' : 'danger');
+        }
+
+        // ─── Warmup ───
+        async function startWarmup() {
+            const intensity = document.querySelector('input[name="intensity"]:checked').value;
+            const sel = document.getElementById('warmup-accs');
+            const selected = Array.from(sel.selectedOptions).map(o => o.value).filter(v => v !== 'all');
+            clearLog('warmup-log');
+            const r = await fetch('/api/tasks/warmup', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ intensity, accounts: selected })
+            }).then(x => x.json());
+            if (r.success) showToast('Warmup đã bắt đầu');
+            else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        async function quickWarmup() {
+            clearLog('dash-log');
+            const r = await fetch('/api/tasks/warmup', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ intensity: 'light' })
+            }).then(x => x.json());
+            showToast(r.success ? 'Warmup started' : r.error, r.success ? 'success' : 'danger');
+        }
+
+        // ─── Post ───
+        function toggleTargetUrl() {
+            const type = document.getElementById('post-type').value;
+            document.getElementById('target-url-wrap').style.display = (type !== 'timeline') ? 'block' : 'none';
+        }
+
+        async function startPost() {
+            const content = document.getElementById('post-content').value.trim();
+            if (!content) return showToast('Nhập nội dung bài đăng', 'warning');
+            const post_type = document.getElementById('post-type').value;
+            const target_url = document.getElementById('post-target').value;
+            clearLog('post-log');
+            const r = await fetch('/api/tasks/post', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, post_type, target_url })
+            }).then(x => x.json());
+            if (r.success) showToast('Đang đăng bài...');
+            else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        // ─── Interact ───
+        async function startInteract() {
+            const hashtags = document.getElementById('int-hashtags').value.split(',').map(s => s.trim()).filter(Boolean);
+            const groupsText = document.getElementById('int-groups').value.trim();
+            const groups = groupsText ? groupsText.split('\n').map(s => s.trim()).filter(Boolean) : [];
+            clearLog('interact-log');
+            const r = await fetch('/api/tasks/interact', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    hashtags, groups,
+                    like_per_hashtag: document.getElementById('int-like-per').value,
+                    comment_per_group: document.getElementById('int-cmt-per').value,
+                    add_friends: document.getElementById('int-friends').value,
+                })
+            }).then(x => x.json());
+            if (r.success) showToast('Tương tác bắt đầu');
+            else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        async function quickInteract() {
+            clearLog('dash-log');
+            const r = await fetch('/api/tasks/interact', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hashtags: ['travel', 'food'], groups: [], like_per_hashtag: 3, comment_per_group: 1, add_friends: 2 })
+            }).then(x => x.json());
+            showToast(r.success ? 'Tương tác bắt đầu' : r.error, r.success ? 'success' : 'danger');
+        }
+
+        // ─── Stop ───
+        async function stopTask() {
+            await fetch('/api/tasks/stop', { method: 'POST' });
+            showToast('Đã dừng tác vụ', 'warning');
+        }
+
+        // ─── Logs ───
+        async function loadFileLogs() {
+            const r = await fetch('/api/logs').then(x => x.json());
+            const box = document.getElementById('file-log');
+            if (!r.logs || r.logs.length === 0) {
+                box.innerHTML = '<p class="text-muted">Chưa có log</p>';
+                return;
+            }
+            box.innerHTML = r.logs.map(l => `<p>${l}</p>`).join('');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // ─── Proxy ───
+        async function loadProxies() {
+            const list = await fetch('/api/proxies').then(r => r.json());
+            const lines = list.map(p => p.raw || p.host || JSON.stringify(p)).join('\n');
+            document.getElementById('proxy-text').value = lines;
+
+            const tbody = document.getElementById('proxy-list-tbody');
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Chưa có proxy</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map((p, i) => {
+                const raw = p.raw || p.host || JSON.stringify(p);
+                return `<tr>
+                  <td>${i + 1}</td>
+                  <td><code style="font-size:0.75rem">${raw}</code></td>
+                  <td><button class="btn btn-xs btn-outline-warning" onclick="testProxyItem('${raw}', this)">Test</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function saveProxies() {
+            const text = document.getElementById('proxy-text').value.trim();
+            const r = await fetch('/api/proxies/save', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            }).then(x => x.json());
+            if (r.success) { showToast(`Đã lưu ${r.count} proxy`); loadProxies(); }
+            else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        async function testOneProxy() {
+            const proxy = document.getElementById('test-proxy-input').value.trim();
+            if (!proxy) return showToast('Nhập proxy trước', 'warning');
+            const el = document.getElementById('test-proxy-result');
+            el.style.display = 'block';
+            el.className = 'alert alert-secondary small';
+            el.textContent = '⏳ Đang test...';
+            const r = await fetch('/api/proxies/test', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proxy })
+            }).then(x => x.json());
+            if (r.success) {
+                el.className = 'alert alert-success small';
+                el.textContent = `✓ Proxy hoạt động! IP: ${r.ip}`;
+            } else {
+                el.className = 'alert alert-danger small';
+                el.textContent = `✗ Lỗi: ${r.error}`;
+            }
+        }
+
+        async function testProxyItem(proxy, btn) {
+            btn.disabled = true; btn.textContent = '...';
+            const r = await fetch('/api/proxies/test', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proxy })
+            }).then(x => x.json());
+            btn.disabled = false;
+            if (r.success) { btn.textContent = '✓ ' + r.ip; btn.className = 'btn btn-xs btn-success'; }
+            else { btn.textContent = '✗'; btn.className = 'btn btn-xs btn-danger'; btn.title = r.error; }
+        }
+
+        // ─── Login Batch ───
+        async function loadLoginAccounts() {
+            const accs = await fetch('/api/accounts').then(r => r.json());
+            const sel = document.getElementById('login-accs');
+            // keep first option
+            const first = sel.options[0];
+            sel.innerHTML = '';
+            sel.appendChild(first);
+            if (Array.isArray(accs)) {
+                const eligible = accs.filter(a => a.profile_id && ['new', 'warming', 'active'].includes(a.status));
+                eligible.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a.fb_uid;
+                    opt.textContent = `${a.email || a.fb_uid} [${a.profile_id}] (${a.status})`;
+                    sel.appendChild(opt);
+                });
+                document.getElementById('login-stats').textContent = `${eligible.length} tài khoản đủ điều kiện`;
+            }
+        }
+
+        async function startLoginBatch() {
+            const sel = document.getElementById('login-accs');
+            const selected = Array.from(sel.selectedOptions).map(o => o.value).filter(v => v !== 'all');
+            document.getElementById('login-log').innerHTML = '';
+            document.getElementById('login-result-tbody').innerHTML =
+                '<tr><td colspan="4" class="text-center text-muted py-3">Đang đăng nhập...</td></tr>';
+
+            const r = await fetch('/api/tasks/login-batch', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accounts: selected })
+            }).then(x => x.json());
+
+            if (r.success) showToast('Đang đăng nhập hàng loạt...');
+            else showToast('Lỗi: ' + r.error, 'danger');
+
+            // poll progress into login-log
+            const interval = setInterval(async () => {
+                const s = await fetch('/api/status').then(x => x.json());
+                if (s.task === 'login' && s.logs) {
+                    const box = document.getElementById('login-log');
+                    box.innerHTML = s.logs.map(l => `<p>${l}</p>`).join('');
+                    box.scrollTop = box.scrollHeight;
+                    document.getElementById('login-progress').style.width = (s.progress || 0) + '%';
+                }
+                if (!s.running && s.task === 'login') {
+                    clearInterval(interval);
+                    showToast('Đăng nhập hoàn tất');
+                    loadAccounts();
+                }
+            }, 2000);
+        }
+
+        // ─── Groups ───
+        async function loadGroups() {
+            const groups = await fetch('/api/groups').then(r => r.json());
+            const container = document.getElementById('groups-container');
+            const sel = document.getElementById('group-select');
+
+            if (!groups || groups.error || groups.length === 0) {
+                container.innerHTML = '<div class="p-4 text-center text-muted">Chưa có nhóm nào. Hãy import tài khoản và bấm "Tự động chia nhóm".</div>';
+                return;
+            }
+
+            document.getElementById('group-summary-text').textContent = `${groups.length} nhóm • ${groups.reduce((s, g) => s + g.count, 0)} tài khoản`;
+
+            // Update group select
+            sel.innerHTML = '<option value="all" selected>-- Tất cả nhóm --</option>';
+            groups.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.group;
+                opt.textContent = `Nhóm ${g.group} (${g.count} TK)`;
+                sel.appendChild(opt);
+            });
+
+            const statusColors = { active: 'success', warming: 'warning', new: 'secondary', checkpoint: 'danger', die: 'dark' };
+            container.innerHTML = groups.map(g => `
+              <div class="border-bottom p-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="fw-bold"><i class="fas fa-layer-group text-primary me-2"></i>Nhóm ${g.group}</span>
+                  <span class="badge bg-primary">${g.count} tài khoản</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  ${g.accounts.map(a => `
+                    <span class="badge bg-${statusColors[a.status] || 'secondary'} d-flex align-items-center gap-1" title="${a.email}">
+                      <i class="fas fa-user"></i> ${a.email ? a.email.split('@')[0] : a.fb_uid}
+                      <small>[${a.profile_id || '-'}]</small>
+                    </span>
+                  `).join('')}
+                </div>
+                <div class="mt-2 d-flex gap-1">
+                  <button class="btn btn-xs btn-success" onclick="runSingleGroup(${g.group}, 'login')">🔑 Login</button>
+                  <button class="btn btn-xs btn-primary" onclick="runSingleGroup(${g.group}, 'warmup')">🔥 Warmup</button>
+                  <button class="btn btn-xs btn-warning" onclick="runSingleGroup(${g.group}, 'interact')">❤️ Tương tác</button>
+                  <button class="btn btn-xs btn-info text-white" onclick="runSingleGroup(${g.group}, 'post')">✏️ Đăng bài</button>
+                </div>
+              </div>
+            `).join('');
+        }
+
+        async function autoAssignGroups() {
+            const size = parseInt(document.getElementById('group-size').value) || 5;
+            const r = await fetch('/api/groups/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ group_size: size })
+            }).then(x => x.json());
+            if (r.success) {
+                showToast(`Đã chia ${r.changed} tài khoản thành nhóm ${size}`);
+                loadGroups();
+            } else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        async function runSingleGroup(groupNum, taskType) {
+            const r = await fetch('/api/tasks/run-group', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    task_type: taskType,
+                    groups: [groupNum],
+                    delay_between_groups: 0,
+                    params: { intensity: 'light' }
+                })
+            }).then(x => x.json());
+            if (r.success) showToast(`Nhóm ${groupNum}: ${taskType} bắt đầu`);
+            else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        async function startGroupTask() {
+            const taskType = document.getElementById('group-task-type').value;
+            const sel = document.getElementById('group-select');
+            const selectedGroups = Array.from(sel.selectedOptions)
+                .map(o => o.value).filter(v => v !== 'all').map(Number);
+            const delay = parseInt(document.getElementById('group-delay').value) || 60;
+            const intensity = document.getElementById('group-intensity').value;
+
+            document.getElementById('group-log').innerHTML = '';
+
+            const r = await fetch('/api/tasks/run-group', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    task_type: taskType,
+                    groups: selectedGroups,
+                    delay_between_groups: delay,
+                    params: { intensity }
+                })
+            }).then(x => x.json());
+
+            if (r.success) showToast(`Bắt đầu chạy '${taskType}' theo nhóm`);
+            else showToast('Lỗi: ' + r.error, 'danger');
+
+            // Poll log into group-log box
+            const interval = setInterval(async () => {
+                const s = await fetch('/api/status').then(x => x.json());
+                if (s.logs) {
+                    const box = document.getElementById('group-log');
+                    box.innerHTML = s.logs.map(l => `<p>${l}</p>`).join('');
+                    box.scrollTop = box.scrollHeight;
+                    document.getElementById('group-progress').style.width = (s.progress || 0) + '%';
+                }
+                if (!s.running) clearInterval(interval);
+            }, 2000);
+        }
+
+        document.getElementById('group-task-type').addEventListener('change', function () {
+            document.getElementById('group-warmup-opts').style.display = (this.value === 'warmup') ? 'block' : 'none';
+        });
+
+        // ─── Fanpage ───
+        function togglePagePostFields() {
+            const type = document.getElementById('fp-post-type').value;
+            document.getElementById('fp-post-fields').style.display = type === 'post' ? 'block' : 'none';
+            document.getElementById('fp-reel-fields').style.display = type === 'reel' ? 'block' : 'none';
+        }
+
+        async function loadPages() {
+            const pages = await fetch('/api/pages').then(r => r.json());
+            const tbody = document.getElementById('fp-tbody');
+            document.getElementById('fp-count-text').textContent = `${(pages || []).length} page`;
+
+            if (!pages || pages.error || pages.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Chưa có fanpage</td></tr>';
+                return;
+            }
+            const catLabels = {
+                public_figure: '👤 Nhân vật CC', entertainment: '🎭 Giải trí',
+                news_media: '📰 Tin tức', education: '📚 GD', sports: '⚽ Thể thao',
+                music: '🎵 Âm nhạc', food: '🍜 Ẩm thực', travel: '✈️ Du lịch',
+                health: '💪 SK', technology: '💻 CN', business: '🏢 DN', community: '🌐 CĐ'
+            };
+            tbody.innerHTML = pages.map(p => `
+              <tr>
+                <td>
+                  <div class="fw-semibold">${p.page_name}</div>
+                  ${p.page_url ? `<small><a href="${p.page_url}" target="_blank" class="text-muted">${p.page_url.replace('https://www.facebook.com/', '')}</a></small>` : ''}
+                </td>
+                <td><small>${catLabels[p.category] || p.category}</small></td>
+                <td><code class="small">${p.owner_uid || '-'}</code></td>
+                <td><span class="badge bg-info">${p.post_count || 0}</span>/<span class="badge bg-warning">${p.reel_count || 0}</span></td>
+                <td><span class="badge bg-secondary">${(p.editors || []).length}</span></td>
+                <td>
+                  <select class="form-select form-select-sm" style="width:110px" onchange="setPageStatus('${p.page_id}', this.value)">
+                    ${['active', 'inactive', 'banned'].map(s => `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+                  </select>
+                </td>
+                <td>
+                  <button class="btn btn-xs btn-danger" onclick="deletePage('${p.page_id}')"><i class="fas fa-trash"></i></button>
+                </td>
+              </tr>
+            `).join('');
+        }
+
+        async function addPageManual() {
+            const name = document.getElementById('fp-name').value.trim();
+            if (!name) return showToast('Nhập tên page', 'warning');
+            const r = await fetch('/api/pages/add', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    page_name: name,
+                    page_url: document.getElementById('fp-url').value,
+                    page_id: document.getElementById('fp-pageid').value,
+                    owner_uid: document.getElementById('fp-owner').value,
+                    category: document.getElementById('fp-category').value,
+                    description: document.getElementById('fp-desc').value,
+                })
+            }).then(x => x.json());
+            if (r.success) { showToast('Đã thêm page: ' + name); loadPages(); }
+            else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        async function createPageAuto() {
+            const profileId = document.getElementById('fp-auto-profile').value.trim();
+            const pageName = document.getElementById('fp-auto-name').value.trim();
+            if (!profileId || !pageName) return showToast('Nhập Profile ID và Tên page', 'warning');
+            document.getElementById('fanpage-log').innerHTML = '';
+            const r = await fetch('/api/pages/create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    profile_id: parseInt(profileId),
+                    page_name: pageName,
+                    owner_uid: document.getElementById('fp-auto-owner').value,
+                    category: document.getElementById('fp-auto-category').value,
+                    description: document.getElementById('fp-auto-desc').value,
+                })
+            }).then(x => x.json());
+            if (r.success) showToast('Đang tạo page tự động...');
+            else showToast('Lỗi: ' + r.error, 'danger');
+            // Poll log
+            _pollFanpageLog();
+        }
+
+        async function addEditorTask() {
+            const profileId = document.getElementById('fp-ed-profile').value.trim();
+            const pageUrl = document.getElementById('fp-ed-pageurl').value.trim();
+            const email = document.getElementById('fp-ed-email').value.trim();
+            if (!profileId || !pageUrl || !email) return showToast('Điền đầy đủ thông tin', 'warning');
+            document.getElementById('fanpage-log').innerHTML = '';
+            const r = await fetch('/api/pages/add-editor', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    profile_id: parseInt(profileId),
+                    page_url: pageUrl,
+                    editor_email: email,
+                    role: document.getElementById('fp-ed-role').value,
+                })
+            }).then(x => x.json());
+            if (r.success) showToast('Đang add editor...');
+            else showToast('Lỗi: ' + r.error, 'danger');
+            _pollFanpageLog();
+        }
+
+        async function postToPages() {
+            const postType = document.getElementById('fp-post-type').value;
+            document.getElementById('fanpage-log').innerHTML = '';
+            const body = { post_type: postType };
+            if (postType === 'post') {
+                const content = document.getElementById('fp-content').value.trim();
+                if (!content) return showToast('Nhập nội dung bài đăng', 'warning');
+                body.content = content;
+            } else {
+                const videoPath = document.getElementById('fp-video-path').value.trim();
+                if (!videoPath) return showToast('Nhập đường dẫn video', 'warning');
+                body.video_path = videoPath;
+                body.caption = document.getElementById('fp-caption').value;
+            }
+            const r = await fetch('/api/pages/post', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).then(x => x.json());
+            if (r.success) showToast(`Đang đăng ${postType} lên các page...`);
+            else showToast('Lỗi: ' + r.error, 'danger');
+            _pollFanpageLog();
+        }
+
+        async function deletePage(pageId) {
+            if (!confirm('Xóa page ' + pageId + ' khỏi danh sách?')) return;
+            await fetch(`/api/pages/delete/${pageId}`, { method: 'DELETE' });
+            showToast('Đã xóa'); loadPages();
+        }
+
+        async function setPageStatus(pageId, status) {
+            await fetch('/api/pages/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page_id: pageId, status }) });
+        }
+
+        function _pollFanpageLog() {
+            const interval = setInterval(async () => {
+                const s = await fetch('/api/status').then(x => x.json());
+                if (s.logs) {
+                    const box = document.getElementById('fanpage-log');
+                    box.innerHTML = s.logs.map(l => `<p>${l}</p>`).join('');
+                    box.scrollTop = box.scrollHeight;
+                    document.getElementById('fanpage-progress').style.width = (s.progress || 0) + '%';
+                }
+                if (!s.running) { clearInterval(interval); loadPages(); }
+            }, 2000);
+        }
+
+        // Override showPage to also load fanpage
+        const _origShowPage = showPage;
+        function showPage(name) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + name).classList.add('active');
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+            if (name === 'accounts') loadAccounts();
+            if (name === 'profiles') loadProfiles();
+            if (name === 'logs') loadFileLogs();
+            if (name === 'proxy') loadProxies();
+            if (name === 'login') loadLoginAccounts();
+            if (name === 'groups') loadGroups();
+            if (name === 'fanpage') loadPages();
+        }
+
+        // ─── Sync Mode ───
+        async function toggleSyncMode(enabled) {
+            const r = await fetch('/api/sync-mode', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled })
+            }).then(x => x.json());
+            const label = document.getElementById('sync-mode-label');
+            if (r.enabled) {
+                label.textContent = 'Song song';
+                label.style.color = '#0d6efd';
+                label.style.fontWeight = '700';
+                showToast('⚡ Sync Mode BẬT — tất cả profile chạy cùng lúc', 'primary');
+            } else {
+                label.textContent = 'Tuần tự';
+                label.style.color = '#999';
+                label.style.fontWeight = 'normal';
+                showToast('▶ Sync Mode TẮT — chạy tuần tự từng profile', 'secondary');
+            }
+        }
+
+        // ─── Init ───
+        document.addEventListener('DOMContentLoaded', async () => {
+            loadSummary();
+            startPolling();
+            // Load sync mode state from server
+            const sm = await fetch('/api/sync-mode').then(x => x.json());
+            const toggle = document.getElementById('sync-mode-toggle');
+            toggle.checked = sm.enabled;
+            const label = document.getElementById('sync-mode-label');
+            if (sm.enabled) {
+                label.textContent = 'Song song';
+                label.style.color = '#0d6efd';
+                label.style.fontWeight = '700';
+            }
+        });
+
+    </script>
+</body>
+
+</html>

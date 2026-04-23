@@ -1,0 +1,25 @@
+# Data files - không push lên Git (mỗi máy có riêng)
+content/nuoiaccfb/accounts.json
+content/nuoiaccfb/pages.json
+content/nuoiaccfb/proxies.txt
+content/nuoiaccfb/scheduler.log
+content/nuoiaccfb/profiles_created.json
+
+# API keys
+API/
+
+# Logs
+logs/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
