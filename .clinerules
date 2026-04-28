@@ -1,0 +1,46 @@
+# AI Content Factory (A.C.F) — Project Rules for Cline
+
+## Bắt buộc đọc trước khi làm việc
+Đầu mỗi phiên, đọc file tổng quan kiến trúc:
+- `.windsurf/workflows/architecture.md` — Tổng quan hệ thống, luồng dữ liệu, schema
+
+Tùy nhiệm vụ, đọc thêm file context tương ứng:
+- `.windsurf/workflows/layer1-brain.md` — Layer 1: OpenClaw, MCP crawler, search Douyin/XHS, ghi Google Sheet
+- `.windsurf/workflows/layer2-refinery.md` — Layer 2: Download video, edit/băm, dịch, lồng tiếng, n8n
+- `.windsurf/workflows/layer3-distribute.md` — Layer 3: Facebook automation, TikTok phonefarm
+- `.windsurf/workflows/layer4-infra.md` — Layer 4: Docker, proxy, network, config
+
+## Quy tắc quan trọng
+1. **Không tạo MCP server mới** — Đã có `agents/openclaw-mcp/server.js` (Node.js, HTTP transport, chạy trong Docker). Mọi tool mới thêm vào file này.
+2. **Không dùng child_process gọi Python** trong MCP server — MCP chạy trong Docker container, không có Python.
+3. **Giữ tối thiểu số tool** — Mỗi tool call tốn tiền LLM. Gộp chức năng khi có thể.
+4. **Google Sheets là database chính** — Không tạo DB mới trừ khi được yêu cầu.
+5. **Không tạo file _tmp, test, hay log rác** — Dọn sạch sau khi debug.
+6. **Mọi thay đổi Docker** cần rebuild: `docker compose -f agents/openclaw-mcp/docker-compose.yml up -d --build`
+
+## Tech Stack
+- AI Gateway: OpenClaw (Docker, WSL2)
+- MCP Server: Node.js 20 (`agents/openclaw-mcp/`)
+- Workflow: n8n (Docker)
+- Crawler/Processing: Python 3.x (`crawler/`)
+- FB Automation: Python + iXBrowser (`content/nuoiaccfb/`)
+- TikTok Automation: Python + ADB (`content/boxphone/`)
+- TTS: vieneu-tts (`libs/vieneu-tts/`)
+- Proxy: 9router
+- Cookies: `cookies/douyin_cookies.json`
+
+## Cấu trúc thư mục
+```
+agents/openclaw-mcp/  → MCP server (Layer 1) — ĐANG DÙNG
+crawler/              → Python scripts cho download, edit, dịch (Layer 2)
+content/nuoiaccfb/    → Facebook automation (Layer 3)
+content/boxphone/     → TikTok phonefarm (Layer 3)
+common/               → Shared Python utilities
+config.py             → Config tập trung
+cookies/              → Browser cookies (Douyin)
+dashboard/            → Monitoring web UI
+downloads/            → Video đã tải
+libs/vieneu-tts/      → TTS engine
+n8n/                  → n8n workflow exports
+.windsurf/workflows/  → Architecture docs (đọc để hiểu context)
+```

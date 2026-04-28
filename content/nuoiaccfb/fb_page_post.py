@@ -10,6 +10,21 @@ import re
 import time
 from pathlib import Path
 
+try:
+    from debug_utils import screenshot_on_error  # type: ignore
+except ImportError:
+    async def screenshot_on_error(page, context_name="error"):  # type: ignore[no-redef]
+        return ""
+
+try:
+    from video_dedup import check_and_record, record_post  # type: ignore
+except ImportError:
+    def check_and_record(video_path, page_url, fb_uid=""):  # type: ignore[no-redef]
+        return {"hash": "", "already_posted": False, "skip": False}
+
+    def record_post(video_hash, page_url, fb_uid="", video_path=""):  # type: ignore[no-redef]
+        return False
+
 
 # ─────────────────────────────────────────────
 # Content Spin
@@ -149,10 +164,12 @@ async def post_to_page(page, page_url: str, content: str,
             print(f"[fb_page_post] ✓ Đăng bài thành công: {content[:50]}")
         else:
             result["error"] = "Không tìm thấy nút Đăng"
+            await screenshot_on_error(page, f"post_to_page_no_btn")
 
     except Exception as e:
         result["error"] = str(e)
         print(f"[fb_page_post] ✗ Lỗi: {e}")
+        await screenshot_on_error(page, f"post_to_page_exception")
 
     return result
 
@@ -212,6 +229,14 @@ async def post_reel_to_page(page, page_url: str, video_path: str,
     if not os.path.exists(video_path):
         result["error"] = f"Không tìm thấy video: {video_path}"
         return result
+
+    # ── Dedup check ──
+    dedup = check_and_record(video_path, page_url)
+    if dedup["skip"]:
+        result["error"] = "dedup: video đã đăng lên page này"
+        result["skipped"] = True
+        return result
+    _video_hash = dedup["hash"]
 
     if spin and caption:
         caption = spin_content(caption)
@@ -343,12 +368,18 @@ async def post_reel_to_page(page, page_url: str, video_path: str,
             except Exception:
                 continue
 
-        if not result["success"]:
+        if result["success"]:
+            # Ghi nhận dedup sau khi đăng thành công
+            if _video_hash:
+                record_post(_video_hash, page_url, video_path=video_path)
+        else:
             result["error"] = "Không tìm thấy nút Publish"
+            await screenshot_on_error(page, "post_reel_no_publish_btn")
 
     except Exception as e:
         result["error"] = str(e)
         print(f"[fb_page_post] ✗ Lỗi upload Reel: {e}")
+        await screenshot_on_error(page, "post_reel_exception")
 
     return result
 

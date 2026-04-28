@@ -1,3 +1,9 @@
+"""
+[DEPRECATED] Debug script — hardcode video_id, chỉ print HTML.
+
+Dùng thay thế:
+    python crawler/video_downloader.py <URL> --topic TikTok
+"""
 import requests, os, sys, json, re
 
 os.makedirs('D:/Videos/TikTok', exist_ok=True)

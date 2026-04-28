@@ -11,16 +11,17 @@ import json
 import logging
 from datetime import datetime
 
-from sheets_manager import SheetsManager
-from video_downloader import download_video, get_channel_latest_videos, detect_platform
-from video_editor import process_video
+# Cho phép import config.py ở project root
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import SPREADSHEET_ID as DEFAULT_SPREADSHEET_ID, LOG_DIR  # noqa: E402
 
-# ---------------------------------------------------------------------------
-# Config - CẬP NHẬT SPREADSHEET_ID sau khi chạy setup_ggsheet.py
-# ---------------------------------------------------------------------------
-SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID", "19gdA_7ZsOAvzBTlnXQCuIyUClZm9OQsrDm4TcB90mBA")
+from sheets_manager import SheetsManager  # noqa: E402
+from video_downloader import download_video, get_channel_latest_videos, detect_platform  # noqa: E402
+from video_editor import process_video  # noqa: E402
 
-LOG_DIR = r"D:\Contenfactory\logs"
+# Config: SPREADSHEET_ID đọc từ env/.env (KHÔNG hardcode trong source)
+SPREADSHEET_ID = DEFAULT_SPREADSHEET_ID
+
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
@@ -73,13 +74,13 @@ def run_channel_scan(spreadsheet_id: str):
             logger.info("  Khong co video nao.")
             continue
 
-        # Filter new videos (not seen before)
-        new_videos = []
-        for v in videos:
-            if v["url"] and v["url"] != last_video_url:
-                new_videos.append(v)
-            else:
-                break  # Assume list is newest-first; stop at known video
+        # Filter new videos (chưa thấy trong lần quét trước).
+        # KHÔNG dùng break vì kênh có pinned/featured video làm đảo thứ tự
+        # → so trực tiếp với last_video_url cuối cùng đã download.
+        new_videos = [
+            v for v in videos
+            if v.get("url") and v["url"] != last_video_url
+        ]
 
         logger.info(f"  Tim thay {len(new_videos)} video moi")
 
@@ -97,7 +98,7 @@ def run_channel_scan(spreadsheet_id: str):
                 edit_result = process_video(
                     result["file_path"],
                     topic=ch_topic,
-                    platform="tiktok",
+                    platform=detect_platform(url),
                     mode="full"
                 )
                 edited_path = edit_result.get("edited_path") or result["file_path"]
@@ -167,7 +168,7 @@ def run_manual_download(spreadsheet_id: str):
             edit_result = process_video(
                 result["file_path"],
                 topic=topic,
-                platform="tiktok",
+                platform=detect_platform(url),
                 mode="full"
             )
             edited_path = edit_result.get("edited_path") or result["file_path"]
@@ -200,8 +201,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     sid = args.spreadsheet_id
-    if sid == "YOUR_SPREADSHEET_ID_HERE":
-        logger.error("Chua cau hinh SPREADSHEET_ID. Sua trong orchestrator.py hoac truyen --spreadsheet-id")
+    if not sid or sid == "YOUR_SPREADSHEET_ID_HERE":
+        logger.error("Chua cau hinh SPREADSHEET_ID. Tao file .env (xem .env.example) hoac truyen --spreadsheet-id")
         sys.exit(1)
 
     results = {}

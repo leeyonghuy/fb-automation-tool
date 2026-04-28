@@ -257,17 +257,48 @@ def clear_cookies(profile_id) -> bool:
 # Playwright Integration
 # ─────────────────────────────────────────────
 
-async def connect_playwright(profile_id, url: str = None):
+def _apply_account_proxy(profile_id, proxy_str: str) -> bool:
+    """
+    Parse proxy string 'host:port:user:pass' hoặc 'host:port' và apply vào profile.
+    Gọi trước open_profile để đảm bảo IP isolation.
+    """
+    if not proxy_str or not proxy_str.strip():
+        return False
+    parts = proxy_str.strip().split(":")
+    if len(parts) < 2:
+        print(f"[ix_browser] Proxy format không hợp lệ: {proxy_str}")
+        return False
+    host = parts[0]
+    try:
+        port = int(parts[1])
+    except ValueError:
+        print(f"[ix_browser] Proxy port không hợp lệ: {parts[1]}")
+        return False
+    user = parts[2] if len(parts) > 2 else ""
+    password = parts[3] if len(parts) > 3 else ""
+    ok = update_proxy(profile_id, host=host, port=port, user=user, password=password)
+    if ok:
+        print(f"[ix_browser] IP isolation: proxy {host}:{port} applied to profile {profile_id}")
+    return ok
+
+
+async def connect_playwright(profile_id, url: str = None, proxy_str: str = ""):
     """
     Open profile and connect Playwright via CDP.
     Returns (playwright_instance, browser, context, page)
     Call disconnect_playwright() when done.
+
+    proxy_str: 'host:port:user:pass' — nếu truyền vào sẽ apply trước khi open (IP isolation).
     """
     try:
         from playwright.async_api import async_playwright
     except ImportError:
         print("[ix_browser] Install playwright: pip install playwright && playwright install chromium")
         return None, None, None, None
+
+    # IP isolation: apply proxy trước khi open profile
+    if proxy_str:
+        _apply_account_proxy(profile_id, proxy_str)
 
     result = open_profile_with_retry(profile_id)
     if not result["success"]:

@@ -13,9 +13,13 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+# Cho phép import config.py ở project root
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import GOOGLE_CREDENTIALS_FILE  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
-CREDENTIALS_FILE = r"D:\Contenfactory\API\nha-may-content-208dc5165e29.json"
+CREDENTIALS_FILE = GOOGLE_CREDENTIALS_FILE
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # Column indices (0-based) for Channels sheet

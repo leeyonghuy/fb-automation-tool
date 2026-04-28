@@ -3,8 +3,10 @@ fb_post.py
 Facebook auto posting - text, image, video.
 - Post to personal timeline
 - Post to group
-- Post to fanpage
 - Schedule posts
+
+NOTE: post_to_fanpage() đã được chuyển sang fb_page_post.post_to_page()
+      spin_content() đã được chuyển sang fb_page_post.spin_content()
 """
 
 import asyncio
@@ -12,6 +14,17 @@ import random
 import time
 import os
 from pathlib import Path
+
+# Re-export spin_content từ fb_page_post để backward compat
+try:
+    from fb_page_post import spin_content  # type: ignore  # noqa: F401
+except ImportError:
+    def spin_content(template: str) -> str:  # type: ignore[no-redef]
+        import re
+        def pick(m):
+            options = m.group(1).split("|")
+            return random.choice(options)
+        return re.sub(r'\{([^}]+)\}', pick, template)
 
 
 async def _delay(min_s=1.0, max_s=3.0):
@@ -161,65 +174,43 @@ async def post_to_group(page, group_url: str, content: str, images: list = None)
 
 
 # ─────────────────────────────────────────────
-# Post to Fanpage
+# Post to Fanpage — redirect sang fb_page_post
 # ─────────────────────────────────────────────
 
 async def post_to_fanpage(page, page_url: str, content: str, images: list = None) -> bool:
-    """Post to a Facebook fanpage"""
-    print(f"[fb_post] Posting to fanpage: {page_url}")
+    """
+    [DEPRECATED] Dùng fb_page_post.post_to_page() thay thế.
+    Giữ lại để backward compat — redirect sang fb_page_post.
+    """
     try:
-        await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
-        await _delay(2, 3)
-
-        composer = await page.wait_for_selector(
-            'div[aria-label*="Write something"], div[aria-label*="mind"]',
-            timeout=10000
-        )
-        await composer.click()
-        await _delay(1, 2)
-
-        text_area = await page.wait_for_selector(
-            '[contenteditable="true"][role="textbox"]', timeout=10000
-        )
-        for char in content:
-            await page.keyboard.type(char)
-            await asyncio.sleep(random.uniform(0.02, 0.08))
-
-        await _delay(1, 2)
-
-        if images:
-            for img in images:
-                if os.path.exists(img):
-                    await _upload_image(page, img)
-
-        post_btn = await page.wait_for_selector(
-            '[aria-label="Post"][role="button"]', timeout=10000
-        )
-        await post_btn.click()
-        await _delay(3, 5)
-
-        print("[fb_post] Fanpage post submitted")
-        return True
-
-    except Exception as e:
-        print(f"[fb_post] Fanpage post error: {e}")
-        return False
-
-
-# ─────────────────────────────────────────────
-# Spin Content (simple)
-# ─────────────────────────────────────────────
-
-def spin_content(template: str) -> str:
-    """
-    Simple spin syntax: {option1|option2|option3}
-    e.g. "Hello {world|everyone|friends}!" -> "Hello friends!"
-    """
-    import re
-    def pick(m):
-        options = m.group(1).split("|")
-        return random.choice(options)
-    return re.sub(r'\{([^}]+)\}', pick, template)
+        from fb_page_post import post_to_page  # type: ignore
+        result = await post_to_page(page, page_url=page_url, content=content,
+                                    images=images, spin=False)
+        return result.get("success", False)
+    except ImportError:
+        print("[fb_post] fb_page_post không khả dụng, dùng fallback")
+        # Fallback inline
+        try:
+            await page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
+            await asyncio.sleep(random.uniform(2, 3))
+            composer = await page.wait_for_selector(
+                'div[aria-label*="Write something"], div[aria-label*="mind"]', timeout=10000
+            )
+            await composer.click()
+            await asyncio.sleep(1)
+            text_area = await page.wait_for_selector(
+                '[contenteditable="true"][role="textbox"]', timeout=10000
+            )
+            for char in content:
+                await page.keyboard.type(char)
+                await asyncio.sleep(random.uniform(0.02, 0.08))
+            post_btn = await page.wait_for_selector('[aria-label="Post"][role="button"]', timeout=10000)
+            await post_btn.click()
+            await asyncio.sleep(random.uniform(3, 5))
+            return True
+        except Exception as e:
+            print(f"[fb_post] Fanpage post error: {e}")
+            return False
 
 
 # ─────────────────────────────────────────────

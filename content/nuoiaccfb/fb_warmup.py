@@ -18,6 +18,12 @@ Daily limits (safe defaults):
 import asyncio
 import random
 import time
+
+try:
+    from debug_utils import screenshot_on_error  # type: ignore
+except ImportError:
+    async def screenshot_on_error(page, context_name="error"):  # type: ignore[no-redef]
+        return ""
 from typing import Optional
 
 # Safe daily limits

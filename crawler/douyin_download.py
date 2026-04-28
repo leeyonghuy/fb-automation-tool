@@ -1,5 +1,9 @@
 """
-Download Douyin video - extract URL from page and download with cookies.
+[DEPRECATED] Debug script — hardcode VIDEO_ID, chỉ dùng test 1 lần.
+
+Dùng thay thế:
+    python crawler/video_downloader.py <URL> --topic review_phim
+Hoặc qua Dashboard UI.
 """
 import os, sys, re, time, json, urllib.parse
 from playwright.sync_api import sync_playwright

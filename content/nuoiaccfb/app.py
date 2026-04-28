@@ -31,6 +31,9 @@ task_status = {
     "last_updated": ""
 }
 
+# Task cancellation flag
+_cancel_flag = {"requested": False}
+
 # Sync mode: True = chạy song song tất cả acc, False = tuần tự từng acc
 sync_mode = {"enabled": False}
 
@@ -413,9 +416,15 @@ def task_login():
 
 @app.route("/api/tasks/stop", methods=["POST"])
 def stop_task():
+    _cancel_flag["requested"] = True
     task_status["running"] = False
-    add_log("Task stopped by user")
+    add_log("⛔ Task stopped by user")
     return jsonify({"success": True})
+
+
+@app.route("/api/tasks/cancel-status", methods=["GET"])
+def cancel_status():
+    return jsonify({"cancel_requested": _cancel_flag["requested"]})
 
 
 # ─────────────────────────────────────────────
@@ -692,7 +701,7 @@ def task_login_batch():
                         ok_count += 1
                         add_log(f"  ✓ Login OK")
                         from account_manager import update_account
-                        update_account(acc["fb_uid"], {"status": "warming", "last_login": datetime.now().isoformat()})
+                        update_account(acc["fb_uid"], status="warming", last_login=datetime.now().isoformat())
                     else:
                         add_log(f"  ✗ {result.get('error','Failed')}")
                 except Exception as e:
@@ -939,6 +948,140 @@ def page_post_task():
 
     run_async(_run())
     return jsonify({"success": True, "message": f"Đang đăng {post_type}..."})
+
+
+# ─────────────────────────────────────────────
+# Routes - Publish Queue
+# ─────────────────────────────────────────────
+
+@app.route("/api/queue", methods=["GET"])
+def get_queue():
+    """Lấy danh sách hàng đợi đăng bài"""
+    try:
+        from publish_queue import get_pending_items, get_all_items
+        all_items = get_all_items()
+        return jsonify(all_items)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/queue/add", methods=["POST"])
+def add_to_queue():
+    """Thêm item vào hàng đợi"""
+    data = request.json or {}
+    try:
+        from publish_queue import add_item
+        item = add_item(
+            page_url=data.get("page_url", ""),
+            video_path=data.get("video_path", ""),
+            caption=data.get("caption", ""),
+            post_type=data.get("post_type", "reel"),
+            profile_id=data.get("profile_id"),
+            scheduled_at=data.get("scheduled_at", ""),
+            owner_uid=data.get("owner_uid", ""),
+        )
+        return jsonify({"success": True, "item": item})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/queue/delete/<item_id>", methods=["DELETE"])
+def delete_queue_item(item_id):
+    """Xóa item khỏi hàng đợi"""
+    try:
+        from publish_queue import delete_item
+        ok = delete_item(item_id)
+        return jsonify({"success": ok})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/queue/run", methods=["POST"])
+def run_queue():
+    """Chạy hàng đợi đăng bài ngay"""
+    if task_status["running"]:
+        return jsonify({"success": False, "error": "A task is already running"})
+    data = request.json or {}
+    limit = int(data.get("limit", 10))
+
+    async def _run():
+        task_status["running"] = True
+        task_status["task"] = "publish_queue"
+        task_status["logs"] = []
+        task_status["progress"] = 0
+        _cancel_flag["requested"] = False
+        try:
+            from publish_queue import get_pending_items, mark_done, mark_failed
+            from ix_browser import connect_playwright, disconnect_playwright
+            from fb_page_post import post_to_page, post_reel_to_page
+            import asyncio as _a
+
+            items = get_pending_items(limit=limit)
+            add_log(f"📋 Publish queue: {len(items)} item(s) pending")
+
+            for i, item in enumerate(items):
+                if _cancel_flag["requested"]:
+                    add_log("⛔ Queue cancelled by user")
+                    break
+
+                task_status["progress"] = int((i / max(len(items), 1)) * 100)
+                page_url = item.get("page_url", "")
+                post_type = item.get("post_type", "reel")
+                profile_id = item.get("profile_id")
+                item_id = item.get("id", "")
+
+                add_log(f"[{i+1}/{len(items)}] {post_type} → {page_url}")
+
+                if not profile_id:
+                    add_log(f"  ✗ Thiếu profile_id")
+                    mark_failed(item_id, "missing profile_id")
+                    continue
+
+                pw, browser, ctx, playwright_page = await connect_playwright(
+                    profile_id, page_url or "https://www.facebook.com")
+                if not playwright_page:
+                    add_log(f"  ✗ Browser lỗi")
+                    mark_failed(item_id, "browser_failed")
+                    continue
+
+                try:
+                    if post_type == "reel":
+                        r = await post_reel_to_page(
+                            playwright_page, page_url,
+                            item.get("video_path", ""),
+                            item.get("caption", ""))
+                    else:
+                        r = await post_to_page(
+                            playwright_page, page_url,
+                            item.get("caption", item.get("content", "")),
+                            item.get("images", []))
+
+                    if r.get("success"):
+                        mark_done(item_id)
+                        add_log(f"  ✓ Đăng thành công")
+                    elif r.get("skipped"):
+                        mark_done(item_id, note="skipped_dedup")
+                        add_log(f"  ⚠ Bỏ qua (dedup)")
+                    else:
+                        mark_failed(item_id, r.get("error", "unknown"))
+                        add_log(f"  ✗ {r.get('error','')}")
+                except Exception as e:
+                    mark_failed(item_id, str(e))
+                    add_log(f"  ✗ Exception: {e}")
+                finally:
+                    await disconnect_playwright(pw, browser, profile_id)
+
+                await _a.sleep(20)
+
+            task_status["progress"] = 100
+            add_log("✅ Publish queue done!")
+        except Exception as e:
+            add_log(f"Fatal: {e}")
+        finally:
+            task_status["running"] = False
+
+    run_async(_run())
+    return jsonify({"success": True, "message": "Publish queue started"})
 
 
 # ─────────────────────────────────────────────

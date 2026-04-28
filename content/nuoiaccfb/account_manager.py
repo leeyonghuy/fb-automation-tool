@@ -8,6 +8,7 @@ Manage Facebook accounts / Fanpages.
 """
 
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Optional
@@ -15,17 +16,84 @@ from collections import Counter
 
 ACCOUNTS_FILE = Path(__file__).parent / "accounts.json"
 
+# Cho phép import common/* từ project root
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+try:
+    from common.json_store import load_json, save_json, locked_update  # type: ignore
+    from common.secret_store import encrypt, decrypt, is_encrypted  # type: ignore
+    _HARDENED = True
+except ImportError:
+    # Fallback: giữ hiện thực cũ để không vỡ khi common chưa cài deps
+    _HARDENED = False
+
+    def load_json(path, default=None):  # type: ignore[no-redef]
+        if not Path(path).exists():
+            return default
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def save_json(path, data):  # type: ignore[no-redef]
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    def locked_update(path, default=None):  # type: ignore[no-redef]
+        from contextlib import contextmanager
+
+        @contextmanager
+        def _cm():
+            data = load_json(path, default)
+            yield data
+            save_json(path, data)
+        return _cm()
+
+    def encrypt(s):  # type: ignore[no-redef]
+        return s
+
+    def decrypt(s):  # type: ignore[no-redef]
+        return s
+
+    def is_encrypted(s):  # type: ignore[no-redef]
+        return False
+
+
+# Trường nhạy cảm sẽ được mã hoá khi save, giải mã khi load
+_SENSITIVE_FIELDS = ("password", "two_fa_secret", "cookie")
+
+
+def _decrypt_account(acc: dict) -> dict:
+    """Trả về bản acc với trường nhạy cảm đã giải mã (nhận cả plaintext cũ)."""
+    out = dict(acc)
+    for k in _SENSITIVE_FIELDS:
+        if out.get(k):
+            out[k] = decrypt(out[k])
+    return out
+
+
+def _encrypt_account_in_place(acc: dict) -> None:
+    """Mã hoá trường nhạy cảm của 1 acc (idempotent: skip nếu đã mã hoá)."""
+    for k in _SENSITIVE_FIELDS:
+        v = acc.get(k)
+        if v and not is_encrypted(v):
+            acc[k] = encrypt(v)
+
 
 def _load() -> list:
-    if not ACCOUNTS_FILE.exists():
-        return []
-    with open(ACCOUNTS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    """Load + decrypt sensitive fields."""
+    raw = load_json(ACCOUNTS_FILE, default=[]) or []
+    return [_decrypt_account(a) for a in raw]
 
 
 def _save(accounts: list):
-    with open(ACCOUNTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(accounts, f, ensure_ascii=False, indent=2)
+    """Encrypt sensitive fields trước khi ghi."""
+    encrypted = []
+    for a in accounts:
+        a2 = dict(a)
+        _encrypt_account_in_place(a2)
+        encrypted.append(a2)
+    save_json(ACCOUNTS_FILE, encrypted)
 
 
 # ─────────────────────────────────────────────
@@ -39,16 +107,10 @@ def add_account(fb_uid: str, name: str, profile_id=None,
                 cookie: str = "", note: str = "",
                 proxy: str = "") -> dict:
     """
-    Add new account.
+    Add new account (atomic với file lock).
     account_type: 'personal' | 'fanpage'
     proxy format: 'host:port:user:pass' or 'host:port'
     """
-    accounts = _load()
-    for acc in accounts:
-        if acc["fb_uid"] == fb_uid:
-            print(f"[account_manager] UID {fb_uid} already exists.")
-            return acc
-
     new_acc = {
         "fb_uid": fb_uid,
         "name": name,
@@ -56,7 +118,7 @@ def add_account(fb_uid: str, name: str, profile_id=None,
         "profile_id": profile_id,       # IX Browser profile ID
         "group": 1,                     # Group number for batch processing
         "status": "new",                # new | warming | active | checkpoint | die
-        # Credentials
+        # Credentials (encrypted on disk via secret_store)
         "email": email,
         "password": password,
         "two_fa_secret": two_fa_secret,
@@ -73,8 +135,19 @@ def add_account(fb_uid: str, name: str, profile_id=None,
         "friend_count_today": 0,
         "last_reset_date": time.strftime("%Y-%m-%d"),
     }
-    accounts.append(new_acc)
-    _save(accounts)
+
+    with locked_update(ACCOUNTS_FILE, default=[]) as accs:
+        # Decrypt to compare uid (uid không nhạy cảm, không cần decrypt)
+        for acc in accs:
+            if acc.get("fb_uid") == fb_uid:
+                print(f"[account_manager] UID {fb_uid} already exists.")
+                # Trả bản decrypted cho caller
+                return _decrypt_account(acc)
+        # Chuẩn bị bản encrypted để ghi
+        encrypted = dict(new_acc)
+        _encrypt_account_in_place(encrypted)
+        accs.append(encrypted)
+
     print(f"[account_manager] Added: {name} ({fb_uid})")
     return new_acc
 
@@ -137,26 +210,33 @@ def get_account_by_profile(profile_id) -> Optional[dict]:
 
 
 def update_account(fb_uid: str, **kwargs) -> bool:
-    """Update any field of an account"""
-    accounts = _load()
-    for acc in accounts:
-        if acc["fb_uid"] == fb_uid:
-            acc.update(kwargs)
-            _save(accounts)
-            return True
-    print(f"[account_manager] UID not found: {fb_uid}")
-    return False
+    """Update field bất kỳ (atomic). Tự mã hoá sensitive fields."""
+    found = False
+    with locked_update(ACCOUNTS_FILE, default=[]) as accs:
+        for acc in accs:
+            if acc.get("fb_uid") == fb_uid:
+                # Mã hoá ngay những kwarg nhạy cảm
+                merged = dict(kwargs)
+                for k in _SENSITIVE_FIELDS:
+                    if k in merged and merged[k] and not is_encrypted(merged[k]):
+                        merged[k] = encrypt(merged[k])
+                acc.update(merged)
+                found = True
+                break
+    if not found:
+        print(f"[account_manager] UID not found: {fb_uid}")
+    return found
 
 
 def delete_account(fb_uid: str) -> bool:
-    accounts = _load()
-    before = len(accounts)
-    accounts = [a for a in accounts if a["fb_uid"] != fb_uid]
-    if len(accounts) < before:
-        _save(accounts)
+    deleted = False
+    with locked_update(ACCOUNTS_FILE, default=[]) as accs:
+        before = len(accs)
+        accs[:] = [a for a in accs if a.get("fb_uid") != fb_uid]
+        deleted = len(accs) < before
+    if deleted:
         print(f"[account_manager] Deleted: {fb_uid}")
-        return True
-    return False
+    return deleted
 
 
 def set_status(fb_uid: str, status: str) -> bool:
@@ -243,16 +323,16 @@ def set_group(fb_uid: str, group: int) -> bool:
 
 
 def auto_assign_groups(group_size: int = 5) -> int:
-    """Auto split all accounts into groups of group_size"""
-    accounts = _load()
+    """Auto split all accounts into groups of group_size (atomic)."""
     changed = 0
-    for i, acc in enumerate(accounts):
-        new_group = (i // group_size) + 1
-        if acc.get("group") != new_group:
-            acc["group"] = new_group
-            changed += 1
-    _save(accounts)
-    print(f"[account_manager] Auto-assigned {len(accounts)} accounts into groups of {group_size}")
+    with locked_update(ACCOUNTS_FILE, default=[]) as accs:
+        for i, acc in enumerate(accs):
+            new_group = (i // group_size) + 1
+            if acc.get("group") != new_group:
+                acc["group"] = new_group
+                changed += 1
+        total = len(accs)
+    print(f"[account_manager] Auto-assigned {total} accounts into groups of {group_size}")
     return changed
 
 
@@ -329,5 +409,37 @@ def print_summary():
     print(f"{'='*45}\n")
 
 
+def migrate_existing_accounts() -> int:
+    """
+    Chạy 1 lần: mã hoá tất cả password/2FA/cookie hiện lưu plaintext.
+    Idempotent (skip field đã mã hoá).
+    Trả về số field đã mã hoá.
+    """
+    if not _HARDENED:
+        print("[migrate] common/json_store chưa khả dụng — hãy chạy: pip install -r requirements.txt")
+        return 0
+
+    count = 0
+    with locked_update(ACCOUNTS_FILE, default=[]) as accs:  # type: ignore[arg-type]
+        for a in accs:
+            for k in _SENSITIVE_FIELDS:
+                v = a.get(k)
+                if v and not is_encrypted(v):
+                    a[k] = encrypt(v)
+                    count += 1
+    print(f"[migrate] Mã hoá {count} field nhạy cảm trong {len(accs)} acc.")
+    return count
+
+
 if __name__ == "__main__":
-    print_summary()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--migrate", action="store_true",
+                        help="Mã hoá password/2FA/cookie cũ trong accounts.json")
+    args = parser.parse_args()
+
+    if args.migrate:
+        migrate_existing_accounts()
+    else:
+        print_summary()

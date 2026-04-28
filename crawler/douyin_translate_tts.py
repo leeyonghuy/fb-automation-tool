@@ -1,19 +1,44 @@
 """
-Douyin video: Whisper transcribe (zh) -> deep-translator -> Vietnamese -> edge-tts TTS -> merge with ffmpeg
+douyin_translate_tts.py
+
+Fallback offline pipeline dịch video bằng:
+  Whisper (transcribe) → deep-translator (vi) → edge-tts (TTS) → ffmpeg merge.
+
+Dùng khi không có GEMINI_API_KEY hoặc muốn offline.
+
+Usage:
+    python douyin_translate_tts.py <input.mp4> [--output_dir DIR]
+“Thiết kế hardcode 1 video cụ thể” cũ đã được thay bằng CLI args.
 """
-import os, sys, re, json, subprocess, tempfile, asyncio, shutil
+import os, sys, re, json, subprocess, tempfile, asyncio, shutil, argparse
 
-# Add ffmpeg to PATH so Whisper can find it
-FFMPEG_BIN = r'D:\ffmpeg\ffmpeg-master-latest-win64-gpl\bin'
-os.environ['PATH'] = FFMPEG_BIN + os.pathsep + os.environ.get('PATH', '')
+# Cho phép import config.py ở project root
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import FFMPEG_CMD, EDITED_VIDEO_DIR, BASE_VIDEO_DIR  # noqa: E402
 
-FFMPEG = r'D:\ffmpeg\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe'
-INPUT = r'D:\Videos\TikTok\douyin_7484836618228048154.mp4'
-OUTPUT_DIR = r'D:\Videos\Edited'
-# Use simple temp dir with no spaces/special chars
-TMPDIR = r'D:\Videos\tmp_dub'
+FFMPEG = FFMPEG_CMD
+OUTPUT_DIR = EDITED_VIDEO_DIR
+TMPDIR = os.path.join(BASE_VIDEO_DIR, "tmp_dub")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(TMPDIR, exist_ok=True)
+
+# Parse CLI
+_parser = argparse.ArgumentParser(description="Whisper + deep-translator + edge-tts pipeline")
+_parser.add_argument("input", nargs="?", help="Path to input mp4")
+_parser.add_argument("--output_dir", default=OUTPUT_DIR)
+_args = _parser.parse_args()
+
+if not _args.input:
+    print("Usage: python douyin_translate_tts.py <input.mp4> [--output_dir DIR]")
+    sys.exit(2)
+
+INPUT = _args.input
+OUTPUT_DIR = _args.output_dir
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+if not os.path.isfile(INPUT):
+    print(f"Input not found: {INPUT}")
+    sys.exit(1)
 
 # ── Step 1: Extract audio ─────────────────────────────────────────────────────
 audio_wav = os.path.join(TMPDIR, 'audio.wav')
@@ -121,7 +146,8 @@ else:
     print(f"    Subtitles burned OK")
 
 # ── Step 7: Merge TTS audio ───────────────────────────────────────────────────
-out = os.path.join(OUTPUT_DIR, 'douyin_7484836618228048154_vi.mp4')
+_stem = os.path.splitext(os.path.basename(INPUT))[0]
+out = os.path.join(OUTPUT_DIR, f'{_stem}_vi.mp4')
 if os.path.exists(tts_mp3) and os.path.getsize(tts_mp3) > 1000:
     print("[7] Merging TTS audio...")
     r2 = subprocess.run([

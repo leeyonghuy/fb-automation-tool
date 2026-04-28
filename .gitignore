@@ -1,25 +1,88 @@
+# ─────────────────────────────────────────────
 # Data files - không push lên Git (mỗi máy có riêng)
+# ─────────────────────────────────────────────
 content/nuoiaccfb/accounts.json
 content/nuoiaccfb/pages.json
 content/nuoiaccfb/proxies.txt
 content/nuoiaccfb/scheduler.log
 content/nuoiaccfb/profiles_created.json
+content/nuoiaccfb/cookies/
+content/nuoiaccfb/daily_actions.json
+content/nuoiaccfb/screenshots/
+content/nuoiaccfb/publish_queue.json
+content/nuoiaccfb/video_hashes.json
+content/boxphone/devices.json
+content/boxphone/tmp_import.csv
 
-# API keys
+# ─────────────────────────────────────────────
+# Crawler runtime data
+# ─────────────────────────────────────────────
+crawler/cookies/
+crawler/_tmp_*.py
+
+# ─────────────────────────────────────────────
+# Downloads (video files - rất nặng)
+# ─────────────────────────────────────────────
+downloads/
+
+# ─────────────────────────────────────────────
+# Status DB
+# ─────────────────────────────────────────────
+status.db
+status.db-journal
+
+# ─────────────────────────────────────────────
+# API keys & Secrets
+# ─────────────────────────────────────────────
 API/
+.env
+.env.local
+.env.*.local
 
+# ─────────────────────────────────────────────
+# Cookies (nhạy cảm)
+# ─────────────────────────────────────────────
+cookies/
+
+# ─────────────────────────────────────────────
 # Logs
+# ─────────────────────────────────────────────
 logs/
 *.log
 
+# ─────────────────────────────────────────────
 # Python
+# ─────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
-.env
+*.pyd
 venv/
 .venv/
+*.egg-info/
+dist/
+build/
 
+# ─────────────────────────────────────────────
+# Node
+# ─────────────────────────────────────────────
+node_modules/
+
+# ─────────────────────────────────────────────
 # OS
+# ─────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# ─────────────────────────────────────────────
+# Libs với git repo riêng (embedded repo)
+# ─────────────────────────────────────────────
+libs/vieneu-tts/
+
+# ─────────────────────────────────────────────
+# File rác
+# ─────────────────────────────────────────────
+console.log*
+*.tmp
+*.bak

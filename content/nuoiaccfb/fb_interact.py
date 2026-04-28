@@ -11,11 +11,41 @@ Daily limits enforced to avoid ban.
 
 import asyncio
 import random
+import sys
 import time
 import json
 from pathlib import Path
 
 DAILY_LOG_FILE = Path(__file__).parent / "daily_actions.json"
+
+try:
+    from debug_utils import screenshot_on_error  # type: ignore
+except ImportError:
+    async def screenshot_on_error(page, context_name="error"):  # type: ignore[no-redef]
+        return ""
+
+# Cho phép import common/* từ project root
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+try:
+    from common.json_store import load_json, locked_update  # type: ignore
+except ImportError:
+    from contextlib import contextmanager
+
+    def load_json(path, default=None):  # type: ignore[no-redef]
+        if not Path(path).exists():
+            return default
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    @contextmanager
+    def locked_update(path, default=None):  # type: ignore[no-redef]
+        data = load_json(path, default)
+        yield data
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
 # Conservative daily limits
 DAILY_LIMITS = {
@@ -42,35 +72,24 @@ COMMENT_TEMPLATES = [
 
 def _load_daily_log() -> dict:
     today = time.strftime("%Y-%m-%d")
-    if not DAILY_LOG_FILE.exists():
-        return {}
-    with open(DAILY_LOG_FILE, encoding="utf-8") as f:
-        data = json.load(f)
+    data = load_json(DAILY_LOG_FILE, default={}) or {}
     return data.get(today, {})
 
 
 def _save_daily_log(fb_uid: str, action: str, count: int = 1):
+    """Atomic increment counter cho (today, fb_uid, action)."""
     today = time.strftime("%Y-%m-%d")
-    data = {}
-    if DAILY_LOG_FILE.exists():
-        with open(DAILY_LOG_FILE, encoding="utf-8") as f:
-            data = json.load(f)
-    if today not in data:
-        data[today] = {}
-    if fb_uid not in data[today]:
-        data[today][fb_uid] = {}
-    prev = data[today][fb_uid].get(action, 0)
-    data[today][fb_uid][action] = prev + count
-    with open(DAILY_LOG_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    with locked_update(DAILY_LOG_FILE, default={}) as data:
+        if today not in data:
+            data[today] = {}
+        if fb_uid not in data[today]:
+            data[today][fb_uid] = {}
+        data[today][fb_uid][action] = data[today][fb_uid].get(action, 0) + count
 
 
 def _get_daily_count(fb_uid: str, action: str) -> int:
     today = time.strftime("%Y-%m-%d")
-    if not DAILY_LOG_FILE.exists():
-        return 0
-    with open(DAILY_LOG_FILE, encoding="utf-8") as f:
-        data = json.load(f)
+    data = load_json(DAILY_LOG_FILE, default={}) or {}
     return data.get(today, {}).get(fb_uid, {}).get(action, 0)
 
 
@@ -452,3 +471,9 @@ async def interact_session(page, fb_uid: str, config: dict) -> dict:
 
     print(f"[fb_interact] Session done for {fb_uid}: {stats}")
     return stats
+
+
+# Alias để giữ tương thích với caller cũ (app.py route /api/tasks/run-group)
+async def run_interactions(page, fb_uid: str, config: dict) -> dict:
+    """Alias cho interact_session — giữ tương thích ngược."""
+    return await interact_session(page, fb_uid, config)

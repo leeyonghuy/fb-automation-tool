@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoxPhone TikTok Manager</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+        }
+
+        header {
+            background: #1a1a2e;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid #e91e63;
+        }
+
+        header h1 {
+            font-size: 1.3rem;
+            color: #fff;
+        }
+
+        header .badge {
+            background: #e91e63;
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .tabs {
+            display: flex;
+            background: #16213e;
+            border-bottom: 1px solid #333;
+        }
+
+        .tab {
+            padding: 12px 22px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 0.9rem;
+            border-bottom: 3px solid transparent;
+            transition: all .2s;
+        }
+
+        .tab.active {
+            color: #e91e63;
+            border-bottom-color: #e91e63;
+        }
+
+        .tab:hover {
+            color: #fff;
+        }
+
+        .panel {
+            display: none;
+            padding: 20px;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        .card {
+            background: #1e1e2e;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 14px;
+            border: 1px solid #2a2a3e;
+        }
+
+        .card h3 {
+            margin-bottom: 10px;
+            font-size: 1rem;
+            color: #e91e63;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: opacity .2s;
+        }
+
+        .btn:hover {
+            opacity: 0.85;
+        }
+
+        .btn-primary {
+            background: #e91e63;
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: #333;
+            color: #ddd;
+        }
+
+        .btn-success {
+            background: #2ecc71;
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .btn-info {
+            background: #3498db;
+            color: #fff;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.78rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: #16213e;
+            padding: 10px 12px;
+            text-align: left;
+            color: #aaa;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #2a2a3e;
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: #1a1a2e;
+        }
+
+        .badge-online {
+            background: #2ecc71;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .badge-offline {
+            background: #555;
+            color: #aaa;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.72rem;
+        }
+
+        .badge-warn {
+            background: #f39c12;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.72rem;
+        }
+
+        input,
+        select,
+        textarea {
+            background: #2a2a3e;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            width: 100%;
+            font-size: 0.85rem;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #e91e63;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .status-bar {
+            background: #0d0d1a;
+            padding: 8px 16px;
+            font-size: 0.78rem;
+            color: #888;
+            border-top: 1px solid #222;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .log-box {
+            background: #0d0d1a;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-height: 200px;
+            overflow-y: auto;
+            color: #7fff7f;
+            border: 1px solid #2a2a3e;
+        }
+
+        .system-check {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #16213e;
+            padding: 8px 14px;
+            border-radius: 8px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-green {
+            background: #2ecc71;
+        }
+
+        .dot-red {
+            background: #e74c3c;
+        }
+
+        .dot-gray {
+            background: #555;
+        }
+
+        /* ── SCREEN GRID ── */
+        .screen-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 14px;
+            padding-bottom: 60px;
+        }
+
+        .phone-card {
+            background: #1e1e2e;
+            border-radius: 12px;
+            border: 2px solid #2a2a3e;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: border-color .2s, transform .25s, box-shadow .25s;
+            cursor: pointer;
+        }
+
+        .phone-card:hover {
+            border-color: #e91e63;
+        }
+
+        .phone-card.selected {
+            border-color: #3498db;
+            box-shadow: 0 0 12px rgba(52, 152, 219, 0.5);
+        }
+
+        /* ZOOM FOCUS */
+        .phone-card.focused {
+            border-color: #e91e63 !important;
+            box-shadow: 0 0 24px rgba(233, 30, 99, 0.6) !important;
+            transform: scale(1.04);
+            z-index: 10;
+            position: relative;
+        }
+
+        .phone-card.dimmed {
+            opacity: 0.45;
+            transform: scale(0.97);
+        }
+
+        /* ZOOM MODAL */
+        .zoom-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .zoom-overlay.active {
+            display: flex;
+        }
+
+        .zoom-main {
+            background: #1e1e2e;
+            border-radius: 16px;
+            border: 2px solid #e91e63;
+            width: 340px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .zoom-main .phone-screen-wrap {
+            aspect-ratio: 9/16;
+            height: 560px;
+        }
+
+        .zoom-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 200px;
+        }
+
+        .zoom-controls {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .zoom-controls h4 {
+            color: #e91e63;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+
+        .zoom-dpad {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px;
+            margin: 4px 0;
+        }
+
+        .zoom-dpad button {
+            background: #2a2a3e;
+            border: 1px solid #444;
+            color: #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background .15s;
+        }
+
+        .zoom-dpad button:hover {
+            background: #e91e63;
+        }
+
+        .zoom-dpad .center {
+            background: #333;
+        }
+
+        .zoom-keyboard {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .zoom-keyboard h4 {
+            color: #e91e63;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .zoom-keyboard input {
+            margin-bottom: 6px;
+        }
+
+        /* GROUP CONTROL BAR */
+        .group-bar {
+            background: #16213e;
+            border: 1px solid #3498db;
+            border-radius: 10px;
+            padding: 10px 16px;
+            margin-bottom: 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .group-bar.active {
+            display: flex;
+        }
+
+        .group-bar span {
+            color: #3498db;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        /* TOAST */
+        .toast-container {
+            position: fixed;
+            bottom: 50px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            background: #1e1e2e;
+            border-left: 4px solid #e91e63;
+            color: #e0e0e0;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+            animation: slideIn .3s ease;
+            max-width: 320px;
+        }
+
+        .toast.success {
+            border-color: #2ecc71;
+        }
+
+        .toast.error {
+            border-color: #e74c3c;
+        }
+
+        .toast.info {
+            border-color: #3498db;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* PROXY TABLE */
+        .proxy-status-ok {
+            color: #2ecc71;
+            font-weight: 700;
+        }
+
+        .proxy-status-error {
+            color: #e74c3c;
+        }
+
+        .proxy-status-unknown {
+            color: #888;
+        }
+
+        /* WARMUP */
+        .warmup-card {
+            background: #1e1e2e;
+            border-radius: 10px;
+            border: 1px solid #2a2a3e;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+
+        .warmup-card.running {
+            border-color: #2ecc71;
+        }
+
+        .warmup-stats {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .warmup-stat {
+            text-align: center;
+        }
+
+        .warmup-stat .val {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #e91e63;
+        }
+
+        .warmup-stat .lbl {
+            font-size: 0.72rem;
+            color: #888;
+        }
+
+        /* HEADER STATS */
+        .header-stats {
+            display: flex;
+            gap: 16px;
+            margin-left: auto;
+            align-items: center;
+        }
+
+        .hstat {
+            text-align: center;
+        }
+
+        .hstat .n {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #e91e63;
+        }
+
+        .hstat .l {
+            font-size: 0.68rem;
+            color: #888;
+        }
+
+        /* PHONE CARD EXTRA INFO */
+        .phone-meta {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background: #12122a;
+            font-size: 0.68rem;
+            color: #888;
+        }
+
+        .phone-meta .ip {
+            color: #3498db;
+        }
+
+        .phone-meta .battery {
+            color: #f39c12;
+        }
+
+        /* CHECKBOX */
+        .phone-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #3498db;
+        }
+
+        .phone-header {
+            background: #16213e;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.78rem;
+        }
+
+        .phone-header .phone-name {
+            font-weight: 700;
+            color: #e91e63;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+
+        .phone-screen-wrap {
+            position: relative;
+            background: #000;
+            cursor: crosshair;
+            aspect-ratio: 9/16;
+            overflow: hidden;
+        }
+
+        .phone-screen-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .phone-screen-wrap .no-signal {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 0.8rem;
+            gap: 8px;
+        }
+
+        .phone-controls {
+            display: flex;
+            justify-content: space-around;
+            padding: 6px 4px;
+            background: #12122a;
+            border-top: 1px solid #2a2a3e;
+        }
+
+        .ctrl-btn {
+            background: none;
+            border: 1px solid #333;
+            color: #aaa;
+            border-radius: 6px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all .15s;
+        }
+
+        .ctrl-btn:hover {
+            background: #e91e63;
+            color: #fff;
+            border-color: #e91e63;
+        }
+
+        .screen-fps {
+            font-size: 0.65rem;
+            color: #555;
+            padding: 2px 6px;
+        }
+
+        .stream-badge {
+            background: #e74c3c;
+            color: #fff;
+            font-size: 0.6rem;
+            padding: 1px 5px;
+            border-radius: 4px;
+            animation: blink 1s infinite;
+        }
+
+        .stream-badge.live {
+            background: #2ecc71;
+            color: #000;
+            animation: none;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <header>
+            <span style="font-size:1.6rem">📱</span>
+            <h1>BoxPhone TikTok Manager</h1>
+            <span class="badge" id="deviceCount">0 thiết bị</span>
+            <div style="margin-left:auto;display:flex;gap:8px">
+                <div class="system-check" id="sysCheck">
+                    <div class="check-item">
+                        <div class="dot dot-gray" id="dotAdb"></div><span>ADB</span>
+                    </div>
+                    <div class="check-item">
+                        <div class="dot dot-gray" id="dotScrcpy"></div><span>scrcpy</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('devices')">📱 Thiết Bị</div>
+            <div class="tab" onclick="showTab('screens')">📺 Màn Hình</div>
+            <div class="tab" onclick="showTab('accounts')">👤 Tài Khoản</div>
+            <div class="tab" onclick="showTab('proxy')">🌐 Proxy</div>
+            <div class="tab" onclick="showTab('warmup')">🤖 Nuôi Acc</div>
+            <div class="tab" onclick="showTab('login')">🔐 Đăng Nhập</div>
+            <div class="tab" onclick="showTab('upload')">📹 Upload Video</div>
+            <div class="tab" onclick="showTab('tasks')">⚙️ Tasks</div>
+            <div class="tab" onclick="showTab('scheduler')">🗓️ Lịch Đăng</div>
+            <div class="tab" onclick="showTab('content')">🎬 Nội Dung</div>
+            <div class="tab" onclick="showTab('appmanager')">📦 App Manager</div>
+        </div>
+
+        <!-- TAB: DEVICES -->
+        <div id="tab-devices" class="panel active">
+            <div class="actions">
+                <button class="btn btn-primary" onclick="syncDevices()">🔄 Sync ADB</button>
+                <button class="btn btn-info" onclick="mirrorAll()">🖥️ Mirror Tất Cả</button>
+            </div>
+            <div class="card">
+                <h3>Danh Sách Thiết Bị</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Serial</th>
+                            <th>Model</th>
+                            <th>Android</th>
+                            <th>Trạng thái</th>
+                            <th>Tài khoản</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deviceTable">
+                        <tr>
+                            <td colspan="7" style="text-align:center;color:#666">Nhấn Sync ADB để tải danh sách</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: SCREENS -->
+        <div id="tab-screens" class="panel">
+            <div class="actions">
+                <button class="btn btn-primary" onclick="startAllScreens()">▶ Bật Tất Cả</button>
+                <button class="btn btn-danger" onclick="stopAllScreens()">⏹ Dừng Tất Cả</button>
+                <button class="btn btn-secondary" onclick="refreshScreenList()">🔄 Refresh</button>
+                <select id="screenSize" style="width:auto;padding:8px 12px" onchange="changeScreenSize(this.value)">
+                    <option value="220">Nhỏ (220px)</option>
+                    <option value="300" selected>Vừa (300px)</option>
+                    <option value="400">Lớn (400px)</option>
+                    <option value="500">Rất lớn (500px)</option>
+                </select>
+            </div>
+            <div class="screen-grid" id="screenGrid">
+                <div style="color:#666;padding:20px">Nhấn Refresh để tải danh sách thiết bị...</div>
+            </div>
+        </div>
+
+        <!-- TAB: ACCOUNTS -->
+        <div id="tab-accounts" class="panel">
+            <div class="card">
+                <h3>➕ Thêm Tài Khoản</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Email</label><input id="accEmail" placeholder="email@example.com">
+                    </div>
+                    <div class="form-group"><label>Password</label><input id="accPass" type="password"
+                            placeholder="••••••••"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Serial thiết bị (tuỳ chọn)</label><input id="accSerial"
+                            placeholder="Để trống nếu chưa gán"></div>
+                    <div class="form-group"><label>Ghi chú</label><input id="accNote" placeholder="VD: acc shop A">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="addAccount()">Thêm tài khoản</button>
+                <span style="margin-left:12px;color:#aaa;font-size:0.8rem">hoặc</span>
+                <label class="btn btn-secondary" style="margin-left:8px;cursor:pointer">
+                    📂 Import CSV <input type="file" accept=".csv" style="display:none" onchange="importCSV(this)">
+                </label>
+            </div>
+            <div class="card">
+                <h3>Danh Sách Tài Khoản</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Serial</th>
+                            <th>Trạng thái</th>
+                            <th>Bài đã đăng</th>
+                            <th>Đăng cuối</th>
+                            <th>Xoá</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accountTable">
+                        <tr>
+                            <td colspan="7" style="text-align:center;color:#666">Chưa có tài khoản</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: LOGIN -->
+        <div id="tab-login" class="panel">
+            <div class="card">
+                <h3>🔐 Đăng Nhập Hàng Loạt</h3>
+                <p style="color:#aaa;font-size:0.82rem;margin-bottom:12px">Tự động đăng nhập TikTok cho tất cả thiết bị
+                    đã ghép cặp tài khoản</p>
+                <button class="btn btn-primary" onclick="loginAll()">▶ Đăng nhập tất cả</button>
+            </div>
+            <div class="card">
+                <h3>🔐 Đăng Nhập Một Thiết Bị</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Serial</label><input id="loginSerial"
+                            placeholder="VD: emulator-5554"></div>
+                    <div class="form-group"><label>Email</label><input id="loginEmail" placeholder="email@example.com">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Password</label><input id="loginPass" type="password"></div>
+                    <div class="form-group" style="justify-content:flex-end"><button class="btn btn-primary"
+                            style="margin-top:22px" onclick="loginOne()">Đăng nhập</button></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📋 Log</h3>
+                <div class="log-box" id="loginLog">Chờ thao tác...</div>
+            </div>
+        </div>
+
+        <!-- TAB: UPLOAD -->
+        <div id="tab-upload" class="panel">
+            <div class="card">
+                <h3>📹 Upload Video</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Serial thiết bị</label>
+                        <select id="uploadSerial">
+                            <option value="">-- Chọn thiết bị --</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Đường dẫn video (trên máy tính)</label><input id="uploadVideo"
+                            placeholder="VD: D:\videos\clip1.mp4"></div>
+                </div>
+                <div class="form-group" style="margin-bottom:12px"><label>Caption</label><textarea id="uploadCaption"
+                        rows="2" placeholder="Nội dung mô tả video..."></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Hashtags (cách nhau bằng dấu phẩy)</label><input id="uploadHashtags"
+                            placeholder="tiktok,viral,shop"></div>
+                    <div class="form-group"><label>Tên sản phẩm TikTok Shop (tuỳ chọn)</label><input id="uploadProduct"
+                            placeholder="VD: Áo thun nam"></div>
+                </div>
+                <button class="btn btn-primary" onclick="uploadOne()">▶ Upload Video</button>
+            </div>
+            <div class="card">
+                <h3>📋 Log Upload</h3>
+                <div class="log-box" id="uploadLog">Chờ thao tác...</div>
+            </div>
+        </div>
+
+        <!-- TAB: TASKS -->
+        <div id="tab-tasks" class="panel">
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="loadTasks()">🔄 Refresh</button>
+            </div>
+            <div class="card">
+                <h3>Danh Sách Tasks Đang Chạy</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Task ID</th>
+                            <th>Trạng thái</th>
+                            <th>Tiến độ</th>
+                            <th>Chi tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskTable">
+                        <tr>
+                            <td colspan="4" style="text-align:center;color:#666">Chưa có task</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: PROXY -->
+        <div id="tab-proxy" class="panel">
+            <div class="card">
+                <h3>➕ Thêm Proxy</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Host / IP</label><input id="pxHost" placeholder="1.2.3.4"></div>
+                    <div class="form-group"><label>Port</label><input id="pxPort" type="number" placeholder="8080">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Username (tuỳ chọn)</label><input id="pxUser" placeholder="user">
+                    </div>
+                    <div class="form-group"><label>Password (tuỳ chọn)</label><input id="pxPass" placeholder="pass">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Loại</label>
+                        <select id="pxType">
+                            <option value="http">HTTP</option>
+                            <option value="socks5">SOCKS5</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Ghi chú</label><input id="pxNote" placeholder="VD: proxy VN"></div>
+                </div>
+                <button class="btn btn-primary" onclick="addProxy()">Thêm Proxy</button>
+            </div>
+            <div class="card">
+                <h3>📥 Import Proxy (mỗi dòng 1 proxy)</h3>
+                <p style="color:#888;font-size:0.78rem;margin-bottom:8px">Hỗ trợ: ip:port | ip:port:user:pass |
+                    http://ip:port | socks5://user:pass@ip:port</p>
+                <textarea id="pxImportText" rows="5"
+                    placeholder="1.2.3.4:8080&#10;5.6.7.8:3128:user:pass&#10;socks5://u:p@9.10.11.12:1080"></textarea>
+                <button class="btn btn-success" style="margin-top:8px" onclick="importProxies()">📥 Import</button>
+            </div>
+            <div class="card">
+                <h3>Danh Sách Proxy</h3>
+                <div class="actions">
+                    <button class="btn btn-secondary btn-sm" onclick="loadProxies()">🔄 Refresh</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Host:Port</th>
+                            <th>Loại</th>
+                            <th>User</th>
+                            <th>Trạng thái</th>
+                            <th>IP thực</th>
+                            <th>Thiết bị</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="proxyTable">
+                        <tr>
+                            <td colspan="8" style="text-align:center;color:#666">Chưa có proxy</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: WARMUP / NUÔI ACC -->
+        <div id="tab-warmup" class="panel">
+            <div class="card">
+                <h3>⚙️ Cấu Hình Nuôi Acc</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Thời gian nuôi (phút)</label><input id="wuDuration" type="number"
+                            value="20" min="5" max="120"></div>
+                    <div class="form-group"><label>Xác suất Like (0-1)</label><input id="wuLike" type="number"
+                            value="0.3" step="0.05" min="0" max="1"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Xác suất Follow (0-1)</label><input id="wuFollow" type="number"
+                            value="0.05" step="0.01" min="0" max="1"></div>
+                    <div class="form-group"><label>Xác suất Comment (0-1)</label><input id="wuComment" type="number"
+                            value="0.02" step="0.01" min="0" max="1"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Xem tối thiểu (giây)</label><input id="wuWatchMin" type="number"
+                            value="5" min="3"></div>
+                    <div class="form-group"><label>Xem tối đa (giây)</label><input id="wuWatchMax" type="number"
+                            value="35" max="120"></div>
+                </div>
+                <div class="form-group" style="margin-bottom:12px">
+                    <label>Comment templates (mỗi dòng 1 comment)</label>
+                    <textarea id="wuComments" rows="3"
+                        placeholder="Hay quá!&#10;❤️&#10;Nội dung chất lượng 💯"></textarea>
+                </div>
+            </div>
+            <div class="card">
+                <h3>🚀 Bắt Đầu Nuôi</h3>
+                <div class="form-group" style="margin-bottom:12px">
+                    <label>Chọn thiết bị để nuôi</label>
+                    <select id="wuSerial" multiple style="height:100px">
+                        <option value="">-- Sync ADB trước --</option>
+                    </select>
+                    <small style="color:#888">Giữ Ctrl để chọn nhiều thiết bị</small>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-success" onclick="startWarmup()">▶ Bắt Đầu Nuôi</button>
+                    <button class="btn btn-danger" onclick="stopWarmupSelected()">⏹ Dừng</button>
+                    <button class="btn btn-secondary" onclick="loadWarmupStatus()">🔄 Refresh Status</button>
+                </div>
+            </div>
+            <div id="warmupStatusList"></div>
+        </div>
+
+        <!-- TAB: SCHEDULER -->
+        <div id="tab-scheduler" class="panel">
+            <div class="card">
+                <h3>➕ Tạo Lịch Đăng Bài</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Thiết bị (Serial)</label><input id="schSerial"
+                            placeholder="VD: emulator-5554"></div>
+                    <div class="form-group"><label>Hành động</label>
+                        <select id="schAction">
+                            <option value="upload">Upload Video</option>
+                            <option value="warmup">Nuôi Acc</option>
+                            <option value="login">Đăng Nhập</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Thời gian đăng</label><input id="schTime" type="datetime-local">
+                    </div>
+                    <div class="form-group"><label>Lặp lại</label>
+                        <select id="schRepeat">
+                            <option value="">Không lặp</option>
+                            <option value="daily">Hàng ngày</option>
+                            <option value="weekly">Hàng tuần</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Video path (nếu upload)</label><input id="schVideo"
+                            placeholder="D:\videos\clip.mp4"></div>
+                    <div class="form-group"><label>Caption</label><input id="schCaption" placeholder="Nội dung...">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:12px"><label>Ghi chú</label><input id="schNote"
+                        placeholder="VD: Đăng 8h sáng"></div>
+                <button class="btn btn-primary" onclick="addSchedule()">📅 Tạo Lịch</button>
+            </div>
+            <div class="card">
+                <h3>📋 Danh Sách Lịch</h3>
+                <div class="actions">
+                    <button class="btn btn-secondary btn-sm" onclick="loadSchedules()">🔄 Refresh</button>
+                    <span id="schedulerStatus" style="color:#888;font-size:0.8rem"></span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Serial</th>
+                            <th>Hành động</th>
+                            <th>Thời gian</th>
+                            <th>Lặp</th>
+                            <th>Trạng thái</th>
+                            <th>Ghi chú</th>
+                            <th>Xoá</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleTable">
+                        <tr>
+                            <td colspan="8" style="text-align:center;color:#666">Chưa có lịch</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: CONTENT MANAGER -->
+        <div id="tab-content" class="panel">
+            <div class="card">
+                <h3>➕ Thêm Nội Dung</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Tiêu đề</label><input id="ctTitle"
+                            placeholder="VD: Video viral tháng 4"></div>
+                    <div class="form-group"><label>Đường dẫn video</label><input id="ctVideo"
+                            placeholder="D:\videos\clip.mp4"></div>
+                </div>
+                <div class="form-group" style="margin-bottom:12px"><label>Caption</label><textarea id="ctCaption"
+                        rows="2" placeholder="Nội dung mô tả..."></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Hashtags (cách nhau bằng dấu phẩy)</label><input id="ctHashtags"
+                            placeholder="tiktok,viral,shop"></div>
+                    <div class="form-group"><label>Tags nội bộ</label><input id="ctTags" placeholder="shop,promo"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Tên sản phẩm (tuỳ chọn)</label><input id="ctProduct"
+                            placeholder="Áo thun nam"></div>
+                    <div class="form-group"><label>Link sản phẩm (tuỳ chọn)</label><input id="ctLink"
+                            placeholder="https://..."></div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="addContent()">➕ Thêm</button>
+                    <button class="btn btn-secondary" onclick="importContentFolder()">📂 Import Folder</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📊 Thống Kê</h3>
+                <div id="contentStats" style="display:flex;gap:24px;flex-wrap:wrap;color:#aaa;font-size:0.85rem"></div>
+            </div>
+            <div class="card">
+                <h3>🎬 Danh Sách Nội Dung</h3>
+                <div class="actions">
+                    <button class="btn btn-secondary btn-sm" onclick="loadContent()">🔄 Refresh</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tiêu đề</th>
+                            <th>Video</th>
+                            <th>Caption</th>
+                            <th>Hashtags</th>
+                            <th>Đã dùng</th>
+                            <th>Xoá</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contentTable">
+                        <tr>
+                            <td colspan="7" style="text-align:center;color:#666">Chưa có nội dung</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card">
+                <h3>🚀 Campaign</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Tên campaign</label><input id="campName"
+                            placeholder="Campaign tháng 4"></div>
+                    <div class="form-group"><label>Loại lịch</label>
+                        <select id="campSchedule">
+                            <option value="manual">Thủ công</option>
+                            <option value="auto">Tự động</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:12px"><label>Ghi chú</label><input id="campNote"
+                        placeholder="Mô tả campaign..."></div>
+                <button class="btn btn-primary" onclick="createCampaign()">🚀 Tạo Campaign</button>
+                <div style="margin-top:16px" id="campaignList"></div>
+            </div>
+        </div>
+
+        <!-- TAB: APP MANAGER -->
+        <div id="tab-appmanager" class="panel">
+            <div class="card">
+                <h3>📱 Chọn Thiết Bị</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Thiết bị (chọn nhiều)</label>
+                        <select id="amSerials" multiple style="height:100px">
+                            <option value="">-- Sync ADB trước --</option>
+                        </select>
+                        <small style="color:#888">Giữ Ctrl để chọn nhiều</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Package name</label>
+                        <input id="amPackage" placeholder="VD: com.zhiliaoapp.musically">
+                        <small style="color:#888">TikTok: com.zhiliaoapp.musically</small>
+                    </div>
+                </div>
+                <div class="actions" style="margin-top:8px">
+                    <button class="btn btn-info btn-sm" onclick="amGetApps()">📋 Xem Apps</button>
+                    <button class="btn btn-success btn-sm" onclick="amOpenApp()">▶ Mở App</button>
+                    <button class="btn btn-secondary btn-sm" onclick="amForceStop()">⏹ Force Stop</button>
+                    <button class="btn btn-danger btn-sm" onclick="amClearData()">🗑️ Clear Data</button>
+                    <button class="btn btn-danger btn-sm" onclick="amUninstall()">❌ Gỡ App</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📦 Cài APK Hàng Loạt</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Đường dẫn APK</label><input id="amApkPath"
+                            placeholder="D:\apks\tiktok.apk"></div>
+                    <div class="form-group" style="justify-content:flex-end">
+                        <button class="btn btn-primary" style="margin-top:22px" onclick="amInstallApk()">📦 Cài
+                            APK</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>🔧 Điều Khiển Thiết Bị</h3>
+                <div class="actions">
+                    <button class="btn btn-warning btn-sm" onclick="amReboot()" style="background:#f39c12;color:#000">🔄
+                        Reboot</button>
+                    <button class="btn btn-info btn-sm" onclick="amWake()">💡 Wake</button>
+                    <button class="btn btn-secondary btn-sm" onclick="amLock()">🔒 Lock</button>
+                    <button class="btn btn-secondary btn-sm" onclick="amBattery()">🔋 Pin</button>
+                    <button class="btn btn-secondary btn-sm" onclick="amStorage()">💾 Bộ nhớ</button>
+                    <button class="btn btn-secondary btn-sm" onclick="amScreenTimeout()">⏱️ Screen Timeout 10p</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>💻 Shell Command</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Lệnh shell</label><input id="amShell"
+                            placeholder="VD: getprop ro.product.model"></div>
+                    <div class="form-group" style="justify-content:flex-end">
+                        <button class="btn btn-primary" style="margin-top:22px" onclick="amShellRun()">▶ Chạy</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📋 Kết Quả</h3>
+                <div class="log-box" id="amLog">Chờ thao tác...</div>
+            </div>
+            <div class="card" id="amAppsCard" style="display:none">
+                <h3>📱 Danh Sách App</h3>
+                <div id="amAppsList"
+                    style="max-height:300px;overflow-y:auto;font-size:0.8rem;font-family:monospace;color:#7fff7f"></div>
+            </div>
+        </div>
+
+        <!-- ZOOM MODAL -->
+        <div class="zoom-overlay" id="zoomOverlay" onclick="closeZoom(event)">
+            <div class="zoom-main" id="zoomMain" onclick="event.stopPropagation()">
+                <div class="phone-header">
+                    <span class="phone-name" id="zoomTitle">Thiết bị</span>
+                    <button class="ctrl-btn" onclick="closeZoom()">✕</button>
+                </div>
+                <div class="phone-screen-wrap" id="zoomWrap" onclick="handleZoomTap(event)">
+                    <div class="no-signal" id="zoomNoSig"><span style="font-size:2rem">📵</span><span>Đang tải...</span>
+                    </div>
+                    <img id="zoomScreen" src="" style="display:none" alt="">
+                </div>
+                <div class="phone-controls">
+                    <button class="ctrl-btn" onclick="zoomKey(4)">◀ Back</button>
+                    <button class="ctrl-btn" onclick="zoomKey(3)">⌂ Home</button>
+                    <button class="ctrl-btn" onclick="zoomKey(187)">⧉ Recent</button>
+                    <button class="ctrl-btn" onclick="zoomSwipe('up')">↑ Up</button>
+                    <button class="ctrl-btn" onclick="zoomSwipe('down')">↓ Down</button>
+                </div>
+            </div>
+            <div class="zoom-sidebar">
+                <div class="zoom-controls">
+                    <h4>🎮 Điều Khiển</h4>
+                    <div class="zoom-dpad">
+                        <button onclick="zoomSwipe('left')">◀</button>
+                        <button onclick="zoomSwipe('up')">▲</button>
+                        <button onclick="zoomSwipe('right')">▶</button>
+                        <button onclick="zoomKey(4)">↩</button>
+                        <button class="center" onclick="zoomKey(3)">⌂</button>
+                        <button onclick="zoomKey(187)">⧉</button>
+                        <button onclick="zoomSwipe('left')">◀</button>
+                        <button onclick="zoomSwipe('down')">▼</button>
+                        <button onclick="zoomSwipe('right')">▶</button>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" style="width:100%" onclick="zoomKey(26)">🔒 Lock</button>
+                    <button class="btn btn-secondary btn-sm" style="width:100%" onclick="zoomKey(82)">📋 Menu</button>
+                </div>
+                <div class="zoom-keyboard">
+                    <h4>⌨️ Nhập Text</h4>
+                    <input id="zoomTextInput" placeholder="Nhập text..."
+                        onkeydown="if(event.key==='Enter')sendZoomText()">
+                    <button class="btn btn-primary btn-sm" style="width:100%" onclick="sendZoomText()">Gửi</button>
+                </div>
+                <div class="zoom-controls">
+                    <h4>📱 Thông Tin</h4>
+                    <div id="zoomInfo" style="font-size:0.75rem;color:#aaa;line-height:1.8"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GROUP CONTROL BAR -->
+        <div class="group-bar" id="groupBar">
+            <span id="groupCount">0 thiết bị được chọn</span>
+            <button class="btn btn-info btn-sm" onclick="groupSwipeUp()">↑ Swipe Up All</button>
+            <button class="btn btn-secondary btn-sm" onclick="groupKey(4)">◀ Back All</button>
+            <button class="btn btn-secondary btn-sm" onclick="groupKey(3)">⌂ Home All</button>
+            <button class="btn btn-secondary btn-sm" onclick="groupOpenTikTok()">🎵 Mở TikTok</button>
+            <button class="btn btn-danger btn-sm" onclick="clearSelection()">✕ Bỏ chọn</button>
+        </div>
+
+        <!-- TOAST CONTAINER -->
+        <div class="toast-container" id="toastContainer"></div>
+
+        <div class="status-bar" id="statusBar">Sẵn sàng</div>
+    </div>
+    <script>
+        const API = '';
+        function setStatus(msg) { document.getElementById('statusBar').textContent = msg; }
+        function log(boxId, msg) {
+            const b = document.getElementById(boxId);
+            b.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+            b.scrollTop = b.scrollHeight;
+        }
+        function showToast(msg, type = 'info') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = 'toast ' + type;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3500);
+        }
+
+        function showTab(name) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.target.classList.add('active');
+            if (name === 'accounts') loadAccounts();
+            if (name === 'upload') loadDevicesForSelect();
+            if (name === 'tasks') loadTasks();
+            if (name === 'screens') refreshScreenList();
+            if (name === 'scheduler') loadSchedules();
+            if (name === 'content') { loadContent(); loadCampaigns(); }
+            if (name === 'appmanager') loadAmDevices();
+            if (name !== 'screens') stopAllScreens();
+        }
+
+        // ── SYSTEM CHECK ──
+        async function checkSystem() {
+            const r = await fetch('/api/system/check').then(x => x.json());
+            document.getElementById('dotAdb').className = 'dot ' + (r.adb ? 'dot-green' : 'dot-red');
+            document.getElementById('dotScrcpy').className = 'dot ' + (r.scrcpy ? 'dot-green' : 'dot-red');
+        }
+
+        // ── DEVICES ──
+        async function syncDevices() {
+            setStatus('Đang sync ADB...');
+            const r = await fetch('/api/devices/sync', { method: 'POST' }).then(x => x.json());
+            if (r.success) {
+                renderDevices(r.devices);
+                document.getElementById('deviceCount').textContent = r.count + ' thiết bị';
+                setStatus('Sync xong: ' + r.count + ' thiết bị');
+            } else setStatus('Lỗi: ' + r.error);
+        }
+        function renderDevices(devices) {
+            const tb = document.getElementById('deviceTable');
+            if (!devices.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#666">Không có thiết bị</td></tr>'; return; }
+            tb.innerHTML = devices.map((d, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td><code style="font-size:0.78rem">${d.serial}</code></td>
+                    <td>${d.model || '-'}</td>
+                    <td>${d.android_version || '-'}</td>
+                    <td><span class="badge-${d.adb_status === 'device' ? 'online' : 'offline'}">${d.adb_status || 'offline'}</span></td>
+                    <td>${d.account_id || '<span style="color:#666">Chưa gán</span>'}</td>
+                    <td>
+                        <button class="btn btn-info btn-sm" onclick="mirrorOne('${d.serial}')">🖥️</button>
+                    </td>
+                </tr>`).join('');
+        }
+        async function mirrorOne(serial) {
+            setStatus('Mở scrcpy: ' + serial);
+            await fetch('/api/devices/' + serial + '/mirror', { method: 'POST' });
+        }
+        async function mirrorAll() {
+            setStatus('Mở scrcpy tất cả thiết bị...');
+            const r = await fetch('/api/devices/mirror_all', { method: 'POST' }).then(x => x.json());
+            setStatus('Đã mở ' + (r.results || []).length + ' cửa sổ scrcpy');
+        }
+
+        // ── ACCOUNTS ──
+        async function loadAccounts() {
+            const r = await fetch('/api/accounts').then(x => x.json());
+            const tb = document.getElementById('accountTable');
+            if (!r.accounts.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#666">Chưa có tài khoản</td></tr>'; return; }
+            tb.innerHTML = r.accounts.map(a => `
+                <tr>
+                    <td>${a.id}</td>
+                    <td>${a.email}</td>
+                    <td><code style="font-size:0.75rem">${a.serial || '-'}</code></td>
+                    <td><span class="badge-${a.status === 'active' ? 'online' : 'offline'}">${a.status}</span></td>
+                    <td>${a.post_count || 0}</td>
+                    <td>${a.last_post ? a.last_post.substring(0, 16) : '-'}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="removeAccount('${a.id}')">🗑️</button></td>
+                </tr>`).join('');
+        }
+        async function addAccount() {
+            const email = document.getElementById('accEmail').value.trim();
+            const pass = document.getElementById('accPass').value.trim();
+            const serial = document.getElementById('accSerial').value.trim();
+            const note = document.getElementById('accNote').value.trim();
+            if (!email || !pass) { alert('Nhập email và password!'); return; }
+            const r = await fetch('/api/accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: pass, serial: serial || null, note }) }).then(x => x.json());
+            if (r.success) { setStatus('Đã thêm: ' + email); loadAccounts(); document.getElementById('accEmail').value = ''; document.getElementById('accPass').value = ''; }
+            else alert('Lỗi: ' + r.error);
+        }
+        async function removeAccount(id) {
+            if (!confirm('Xoá tài khoản ' + id + '?')) return;
+            await fetch('/api/accounts/' + id, { method: 'DELETE' });
+            loadAccounts();
+        }
+        async function importCSV(input) {
+            const fd = new FormData(); fd.append('file', input.files[0]);
+            const r = await fetch('/api/accounts/import', { method: 'POST', body: fd }).then(x => x.json());
+            if (r.success) { setStatus('Import xong: ' + r.imported + ' tài khoản'); loadAccounts(); }
+            else alert('Lỗi: ' + r.error);
+        }
+        async function loadDevicesForSelect() {
+            const r = await fetch('/api/devices').then(x => x.json());
+            const sel = document.getElementById('uploadSerial');
+            sel.innerHTML = '<option value="">-- Chọn thiết bị --</option>';
+            (r.devices || []).filter(d => d.adb_status === 'device').forEach(d => {
+                sel.innerHTML += `<option value="${d.serial}">${d.model} (${d.serial})</option>`;
+            });
+        }
+
+        // ── LOGIN ──
+        async function loginOne() {
+            const serial = document.getElementById('loginSerial').value.trim();
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            if (!serial || !email || !pass) { alert('Điền đầy đủ thông tin!'); return; }
+            log('loginLog', `Đang đăng nhập ${email} trên ${serial}...`);
+            const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serial, email, password: pass }) }).then(x => x.json());
+            if (r.success) pollTask(r.task_id, 'loginLog');
+            else log('loginLog', '❌ ' + r.error);
+        }
+        async function loginAll() {
+            const r = await fetch('/api/paired').then(x => x.json());
+            const pairs = (r.pairs || []).filter(p => p.email && p.device_status === 'device');
+            if (!pairs.length) { alert('Không có thiết bị nào đã ghép cặp và online!'); return; }
+            const accounts = pairs.map(p => ({ serial: p.serial, email: p.email, password: '' }));
+            log('loginLog', `Bắt đầu đăng nhập ${pairs.length} thiết bị...`);
+            const r2 = await fetch('/api/login/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accounts }) }).then(x => x.json());
+            if (r2.success) pollTask(r2.task_id, 'loginLog');
+        }
+
+        // ── UPLOAD ──
+        async function uploadOne() {
+            const serial = document.getElementById('uploadSerial').value;
+            const video = document.getElementById('uploadVideo').value.trim();
+            const caption = document.getElementById('uploadCaption').value.trim();
+            const hashtags = document.getElementById('uploadHashtags').value.split(',').map(h => h.trim()).filter(Boolean);
+            const product = document.getElementById('uploadProduct').value.trim();
+            if (!serial || !video) { alert('Chọn thiết bị và nhập đường dẫn video!'); return; }
+            log('uploadLog', `Upload ${video} → ${serial}...`);
+            const r = await fetch('/api/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serial, video_path: video, caption, hashtags, product_name: product || null }) }).then(x => x.json());
+            if (r.success) pollTask(r.task_id, 'uploadLog');
+            else log('uploadLog', '❌ ' + r.error);
+        }
+
+        // ── TASKS ──
+        async function loadTasks() {
+            const r = await fetch('/api/tasks').then(x => x.json());
+            const tb = document.getElementById('taskTable');
+            if (!r.tasks.length) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#666">Chưa có task</td></tr>'; return; }
+            tb.innerHTML = r.tasks.map(t => `
+                <tr>
+                    <td><code>${t.task_id}</code></td>
+                    <td><span class="badge-${t.status === 'done' ? 'online' : 'warn'}">${t.status}</span></td>
+                    <td>${t.result_count}/${t.total}</td>
+                    <td><button class="btn btn-secondary btn-sm" onclick="showTaskDetail('${t.task_id}')">Chi tiết</button></td>
+                </tr>`).join('');
+        }
+        async function showTaskDetail(taskId) {
+            const r = await fetch('/api/tasks/' + taskId).then(x => x.json());
+            alert(JSON.stringify(r.results, null, 2));
+        }
+        async function pollTask(taskId, logBoxId) {
+            const interval = setInterval(async () => {
+                const r = await fetch('/api/tasks/' + taskId).then(x => x.json());
+                if (r.status === 'done') {
+                    clearInterval(interval);
+                    r.results.forEach(res => {
+                        log(logBoxId, (res.success ? '✅' : '❌') + ' ' + (res.serial || '') + ' ' + (res.error || 'OK'));
+                    });
+                    setStatus('Task ' + taskId + ' hoàn thành');
+                } else {
+                    setStatus('Đang chạy task ' + taskId + '...');
+                }
+            }, 3000);
+        }
+
+        // ── SCREENS ──
+        let screenIntervals = {}; // {serial: intervalId}
+        let screenDevices = [];
+        let screenGridSize = 300;
+
+        function changeScreenSize(val) {
+            screenGridSize = parseInt(val);
+            document.getElementById('screenGrid').style.gridTemplateColumns =
+                `repeat(auto-fill, minmax(${screenGridSize}px, 1fr))`;
+        }
+
+        async function refreshScreenList() {
+            const r = await fetch('/api/devices').then(x => x.json());
+            screenDevices = (r.devices || []).filter(d => d.adb_status === 'device');
+            const grid = document.getElementById('screenGrid');
+            if (!screenDevices.length) {
+                grid.innerHTML = '<div style="color:#666;padding:20px">Không có thiết bị nào online. Nhấn Sync ADB trước.</div>';
+                return;
+            }
+            grid.innerHTML = screenDevices.map(d => `
+                <div class="phone-card" id="card-${d.serial}">
+                    <div class="phone-header">
+                        <span class="phone-name" title="${d.serial}">${d.model || d.serial}</span>
+                        <span class="stream-badge" id="badge-${d.serial}">OFF</span>
+                    </div>
+                    <div class="phone-screen-wrap" id="wrap-${d.serial}"
+                         onclick="handleTap('${d.serial}', event)"
+                         ondblclick="handleDoubleTap('${d.serial}', event)">
+                        <div class="no-signal" id="nosig-${d.serial}">
+                            <span style="font-size:2rem">📵</span>
+                            <span>Nhấn ▶ để xem màn hình</span>
+                        </div>
+                        <img id="screen-${d.serial}" src="" style="display:none" alt="">
+                    </div>
+                    <div class="phone-controls">
+                        <button class="ctrl-btn" onclick="startScreen('${d.serial}')" title="Bật stream">▶</button>
+                        <button class="ctrl-btn" onclick="stopScreen('${d.serial}')" title="Dừng stream">⏹</button>
+                        <button class="ctrl-btn" onclick="sendKey('${d.serial}',4)" title="Back">◀</button>
+                        <button class="ctrl-btn" onclick="sendKey('${d.serial}',3)" title="Home">⌂</button>
+                        <button class="ctrl-btn" onclick="sendKey('${d.serial}',187)" title="Recent">⧉</button>
+                        <button class="ctrl-btn" onclick="swipeUp('${d.serial}')" title="Swipe lên">↑</button>
+                    </div>
+                    <div class="screen-fps" id="fps-${d.serial}">Chờ...</div>
+                </div>`).join('');
+        }
+
+        function startScreen(serial) {
+            if (screenIntervals[serial]) return; // đã chạy
+            const img = document.getElementById('screen-' + serial);
+            const nosig = document.getElementById('nosig-' + serial);
+            const badge = document.getElementById('badge-' + serial);
+            const fps = document.getElementById('fps-' + serial);
+            img.style.display = 'block';
+            nosig.style.display = 'none';
+            badge.textContent = 'LIVE';
+            badge.classList.add('live');
+            let frameCount = 0, lastTime = Date.now();
+            let fetching = false;
+
+            async function fetchFrame() {
+                if (fetching) return;
+                fetching = true;
+                try {
+                    const r = await fetch('/api/devices/' + serial + '/screenshot_b64');
+                    const data = await r.json();
+                    if (data.success && data.image) {
+                        img.src = 'data:' + data.mime + ';base64,' + data.image;
+                        frameCount++;
+                        const now = Date.now();
+                        if (now - lastTime >= 2000) {
+                            fps.textContent = (frameCount / ((now - lastTime) / 1000)).toFixed(1) + ' fps';
+                            frameCount = 0;
+                            lastTime = now;
+                        }
+                        badge.textContent = 'LIVE';
+                        badge.classList.add('live');
+                    } else {
+                        badge.textContent = 'ERR';
+                        badge.classList.remove('live');
+                    }
+                } catch (e) {
+                    badge.textContent = 'ERR';
+                    badge.classList.remove('live');
+                }
+                fetching = false;
+            }
+
+            fetchFrame();
+            screenIntervals[serial] = setInterval(fetchFrame, 900);
+            setStatus('Đang stream: ' + serial);
+        }
+
+        function stopScreen(serial) {
+            if (screenIntervals[serial]) {
+                clearInterval(screenIntervals[serial]);
+                delete screenIntervals[serial];
+            }
+            const img = document.getElementById('screen-' + serial);
+            const nosig = document.getElementById('nosig-' + serial);
+            const badge = document.getElementById('badge-' + serial);
+            const fps = document.getElementById('fps-' + serial);
+            if (img) { img.style.display = 'none'; img.src = ''; }
+            if (nosig) nosig.style.display = 'flex';
+            if (badge) { badge.textContent = 'OFF'; badge.classList.remove('live'); }
+            if (fps) fps.textContent = 'Đã dừng';
+        }
+
+        function startAllScreens() {
+            screenDevices.forEach(d => startScreen(d.serial));
+        }
+
+        function stopAllScreens() {
+            screenDevices.forEach(d => stopScreen(d.serial));
+        }
+
+        // Tap vào màn hình → gửi ADB tap
+        function handleTap(serial, event) {
+            const wrap = document.getElementById('wrap-' + serial);
+            const img = document.getElementById('screen-' + serial);
+            if (!img || img.style.display === 'none') return;
+            const rect = wrap.getBoundingClientRect();
+            const relX = (event.clientX - rect.left) / rect.width;
+            const relY = (event.clientY - rect.top) / rect.height;
+            // Giả sử độ phân giải 1080x1920
+            const tapX = Math.round(relX * 1080);
+            const tapY = Math.round(relY * 1920);
+            fetch('/api/devices/' + serial + '/tap', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ x: tapX, y: tapY })
+            });
+            setStatus(`Tap (${tapX}, ${tapY}) → ${serial}`);
+        }
+
+        function handleDoubleTap(serial, event) {
+            event.stopPropagation();
+            // Double tap = back
+            sendKey(serial, 4);
+        }
+
+        async function sendKey(serial, keycode) {
+            await fetch('/api/devices/' + serial + '/keyevent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keycode })
+            });
+        }
+
+        async function swipeUp(serial) {
+            await fetch('/api/devices/' + serial + '/swipe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ x1: 540, y1: 1600, x2: 540, y2: 400, duration: 300 })
+            });
+        }
+
+        // ── INIT ──
+        checkSystem();
+        syncDevices();
+    </script>
+    <script src="/static/scheduler.js"></script>
+    <script src="/static/content.js"></script>
+    <script src="/static/appmanager.js"></script>
+</body>
+
+</html>

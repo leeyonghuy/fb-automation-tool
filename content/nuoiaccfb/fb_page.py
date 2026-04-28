@@ -6,10 +6,37 @@ Tạo và quản lý Facebook Fanpage tự động qua Playwright + IX Browser
 import asyncio
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
 PAGES_FILE = Path(__file__).parent / "pages.json"
+
+# Cho phép import common/* từ project root
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+try:
+    from common.json_store import load_json, save_json, locked_update  # type: ignore
+except ImportError:
+    from contextlib import contextmanager
+
+    def load_json(path, default=None):  # type: ignore[no-redef]
+        if not Path(path).exists():
+            return default
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def save_json(path, data):  # type: ignore[no-redef]
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    @contextmanager
+    def locked_update(path, default=None):  # type: ignore[no-redef]
+        data = load_json(path, default)
+        yield data
+        save_json(path, data)
 
 PAGE_CATEGORIES = {
     "public_figure": "Nhân vật công cộng",
@@ -32,15 +59,11 @@ PAGE_CATEGORIES = {
 # ─────────────────────────────────────────────
 
 def _load_pages() -> list:
-    if not PAGES_FILE.exists():
-        return []
-    with open(PAGES_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return load_json(PAGES_FILE, default=[]) or []
 
 
 def _save_pages(pages: list):
-    with open(PAGES_FILE, "w", encoding="utf-8") as f:
-        json.dump(pages, f, ensure_ascii=False, indent=2)
+    save_json(PAGES_FILE, pages)
 
 
 def get_all_pages() -> list:
@@ -57,7 +80,6 @@ def get_page(page_id: str) -> dict | None:
 def add_page_record(owner_uid: str, page_name: str, page_url: str = "",
                     page_id: str = "", category: str = "public_figure",
                     description: str = "", editors: list = None) -> dict:
-    pages = _load_pages()
     record = {
         "page_id": page_id or f"tmp_{int(time.time())}",
         "page_name": page_name,
@@ -75,29 +97,29 @@ def add_page_record(owner_uid: str, page_name: str, page_url: str = "",
         "last_posted_at": "",
         "notes": "",
     }
-    pages.append(record)
-    _save_pages(pages)
+    with locked_update(PAGES_FILE, default=[]) as pages:
+        pages.append(record)
     return record
 
 
 def update_page(page_id: str, **kwargs) -> bool:
-    pages = _load_pages()
-    for p in pages:
-        if p.get("page_id") == page_id:
-            p.update(kwargs)
-            _save_pages(pages)
-            return True
-    return False
+    found = False
+    with locked_update(PAGES_FILE, default=[]) as pages:
+        for p in pages:
+            if p.get("page_id") == page_id:
+                p.update(kwargs)
+                found = True
+                break
+    return found
 
 
 def delete_page_record(page_id: str) -> bool:
-    pages = _load_pages()
-    before = len(pages)
-    pages = [p for p in pages if p.get("page_id") != page_id]
-    if len(pages) < before:
-        _save_pages(pages)
-        return True
-    return False
+    deleted = False
+    with locked_update(PAGES_FILE, default=[]) as pages:
+        before = len(pages)
+        pages[:] = [p for p in pages if p.get("page_id") != page_id]
+        deleted = len(pages) < before
+    return deleted
 
 
 # ─────────────────────────────────────────────

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SayAz | ContenFactory</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0c0e14;color:#d4d4d8;min-height:100vh}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#1a1d27}::-webkit-scrollbar-thumb{background:#3a3d4a;border-radius:3px}
+
+/* Layout */
+#app{max-width:1440px;margin:0 auto;padding:16px 20px}
+
+/* Header */
+.header{display:flex;align-items:center;gap:16px;padding:14px 20px;background:#13151e;border-radius:12px;margin-bottom:16px;border:1px solid #22253a}
+.header h1{font-size:20px;font-weight:700;color:#fff;white-space:nowrap}
+.header h1 b{color:#7c6fff}
+.header-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.server-time{font-size:12px;color:#666;font-family:monospace}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:16px;background:#13151e;border-radius:10px;padding:4px;border:1px solid #22253a}
+.tab{padding:10px 20px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#888;transition:all .2s;border:none;background:none}
+.tab:hover{color:#ccc;background:#1a1d27}
+.tab.active{background:#7c6fff;color:#fff}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Cards */
+.card{background:#13151e;border-radius:12px;padding:18px;border:1px solid #22253a;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* Services */
+.svc-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.svc{display:flex;align-items:center;gap:8px;background:#0c0e14;padding:8px 14px;border-radius:8px;border:1px solid #22253a;font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-ok{background:#22c55e;box-shadow:0 0 6px #22c55e66}.dot-error{background:#ef4444;box-shadow:0 0 6px #ef444466}
+.dot-offline{background:#52525b}.dot-warning{background:#f59e0b;box-shadow:0 0 6px #f59e0b66}.dot-unknown{background:#52525b}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.stat{background:#13151e;border-radius:10px;padding:14px;border:1px solid #22253a;text-align:center}
+.stat-n{font-size:26px;font-weight:700;color:#7c6fff}.stat-l{font-size:11px;color:#666;margin-top:2px}
+
+/* Forms */
+.form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.fg{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px}
+.fg label{font-size:11px;color:#888;font-weight:600}
+.fg input,.fg select{background:#0c0e14;border:1px solid #2a2d3a;color:#e0e0e0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;transition:border .2s}
+.fg input:focus,.fg select:focus{border-color:#7c6fff}
+.fg textarea{background:#0c0e14;border:1px solid #2a2d3a;color:#e0e0e0;padding:9px 12px;border-radius:8px;font-size:13px;outline:none;transition:border .2s;resize:vertical;font-family:inherit;min-height:38px}
+.fg textarea:focus{border-color:#7c6fff}
+.fg-fixed{flex:0 0 auto;min-width:auto}
+
+/* Mini chart */
+.mini-chart{display:flex;align-items:flex-end;gap:6px;height:80px;padding:8px 0}
+.chart-bar-group{display:flex;flex-direction:column;align-items:center;flex:1;gap:2px}
+.chart-bars{display:flex;gap:2px;align-items:flex-end;height:60px}
+.chart-bar{width:14px;border-radius:3px 3px 0 0;min-height:2px;transition:height .4s}
+.chart-bar-done{background:#22c55e}.chart-bar-err{background:#ef4444}
+.chart-label{font-size:9px;color:#555}
+
+/* Buttons */
+.btn{padding:9px 18px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.btn:active{transform:scale(.97)}
+.btn-purple{background:#7c6fff;color:#fff}.btn-purple:hover{background:#6a5ce7}
+.btn-green{background:#22c55e;color:#fff}.btn-green:hover{background:#16a34a}
+.btn-blue{background:#3b82f6;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-orange{background:#f59e0b;color:#000}.btn-orange:hover{background:#d97706}
+.btn-ghost{background:transparent;color:#888;border:1px solid #2a2d3a}.btn-ghost:hover{color:#fff;border-color:#555}
+.btn-sm{padding:6px 12px;font-size:11px}
+.msg{margin-top:8px;font-size:12px;color:#888;min-height:18px}
+
+/* Grid */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:960px){.two-col{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(3,1fr)}}
+
+/* Tasks */
+.task{background:#0c0e14;border-radius:8px;padding:12px;margin-bottom:8px;border:1px solid #22253a}
+.task-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.task-name{font-size:13px;font-weight:600;color:#fff}
+.task-sub{font-size:10px;color:#666}
+.badge{font-size:10px;padding:2px 8px;border-radius:12px;font-weight:700}
+.badge-running{background:#1e3a8a;color:#93c5fd}.badge-pending{background:#27272a;color:#a1a1aa}
+.badge-done{background:#14532d;color:#86efac}.badge-error{background:#7f1d1d;color:#fca5a5}
+.pbar{height:4px;background:#1f2230;border-radius:2px;overflow:hidden;margin-bottom:4px}
+.pfill{height:100%;border-radius:2px;transition:width .5s}
+.pfill-run{background:linear-gradient(90deg,#7c6fff,#a78bfa)}.pfill-done{background:#22c55e}.pfill-err{background:#ef4444}
+.task-msg{font-size:11px;color:#888}
+
+/* Logs */
+.log-scroll{max-height:340px;overflow-y:auto}
+.log{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid #1a1d27;font-size:11px}
+.log-t{color:#7c6fff;font-family:monospace;flex-shrink:0;width:64px}
+.log-m{color:#aaa}.log-m.err{color:#fca5a5}
+
+/* Video browser */
+.vid-list{max-height:420px;overflow-y:auto}
+.vid{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;transition:background .15s;border-bottom:1px solid #1a1d27}
+.vid:hover{background:#1a1d27}
+.vid.selected{background:#1e2a4a;border-color:#3b82f6}
+.vid-icon{font-size:18px;flex-shrink:0}
+.vid-info{flex:1;min-width:0}
+.vid-name{font-size:12px;font-weight:600;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vid-meta{font-size:10px;color:#666}
+.vid-size{font-size:11px;color:#888;flex-shrink:0}
+.empty-state{color:#555;font-size:12px;text-align:center;padding:30px 0}
+
+/* Pulse */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}.pulse{animation:pulse 1.5s infinite}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <div class="header">
+    <h1><span style="color:#f59e0b;font-weight:800">Say</span><span style="color:#7c6fff;font-weight:800">Az</span> <span style="font-size:14px;color:#888;font-weight:400">|</span> Conten<b>Factory</b> <span style="font-size:12px;color:#555;font-weight:400">Điều khiển Layer 2</span></h1>
+    <div class="header-right">
+      <span class="server-time" id="serverTime">--:--:--</span>
+      <button class="btn btn-ghost btn-sm" onclick="loadAll()">Làm mới</button>
+    </div>
+  </div>
+
+  <!-- System info bar -->
+  <div class="sys-bar" id="sysBar">
+    <div class="sys-chip" id="sysGpu">GPU: đang kiểm tra...</div>
+    <div class="sys-chip" id="sysDisk">Disk: --</div>
+    <div class="sys-chip" id="sysWhisper">Whisper: --</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">Tổng quan</button>
+    <button class="tab" data-tab="pipeline">Xử lý</button>
+    <button class="tab" data-tab="videos">Video</button>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- TAB: OVERVIEW -->
+  <!-- ============================================ -->
+  <div id="tab-overview" class="tab-panel active">
+    <!-- Services -->
+    <div class="svc-row" id="servicesRow"><div class="svc"><div class="dot dot-unknown"></div><span>Loading...</span></div></div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat"><div class="stat-n" id="sTotal">-</div><div class="stat-l">Tổng</div></div>
+      <div class="stat"><div class="stat-n" id="sRun" style="color:#7c6fff">-</div><div class="stat-l">Đang chạy</div></div>
+      <div class="stat"><div class="stat-n" id="sDone" style="color:#22c55e">-</div><div class="stat-l">Hoàn thành</div></div>
+      <div class="stat"><div class="stat-n" id="sErr" style="color:#ef4444">-</div><div class="stat-l">Lỗi</div></div>
+      <div class="stat"><div class="stat-n" id="sToday" style="color:#f59e0b">-</div><div class="stat-l">Hôm nay</div></div>
+    </div>
+
+    <!-- Mini chart + Tasks + Logs -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">Hoạt động 7 ngày</div>
+      <div class="mini-chart" id="miniChart"><div class="empty-state">Loading...</div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Tác vụ</div>
+        <div id="tasksList"><div class="empty-state">Không có tác vụ</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Nhật ký</div>
+        <div class="log-scroll" id="logList"><div class="empty-state">Không có nhật ký</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- TAB: PIPELINE -->
+  <!-- ============================================ -->
+  <div id="tab-pipeline" class="tab-panel">
+
+    <!-- Download + Auto -->
+    <div class="card">
+      <div class="card-title">Tải & Xử lý tự động</div>
+      <div class="form-row">
+        <div class="fg" style="flex:3">
+          <label>Đường dẫn video (mỗi dòng 1 link — TikTok / Douyin / XHS / YouTube / IG / FB / X)</label>
+          <textarea id="pUrl" rows="2" placeholder="https://www.tiktok.com/@user/video/...
+Paste nhiều link, mỗi dòng 1 link"></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fg">
+          <label>Chủ đề</label>
+          <input type="text" id="pTopic" value="Uncategorized" />
+        </div>
+        <div class="fg">
+          <label>Chất lượng</label>
+          <select id="pQuality">
+            <option value="best">Tốt nhất</option>
+            <option value="1080p" selected>1080p</option>
+            <option value="720p">720p</option>
+            <option value="480p">480p (nhẹ)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Chế độ xử lý</label>
+          <select id="pMode">
+            <option value="full">Đầy đủ (Anti-CP + Dịch + Meta)</option>
+            <option value="anticp">Chỉ chống sao chép</option>
+            <option value="translate">Chỉ dịch (Gemini)</option>
+            <option value="metadata">Chỉ tạo Metadata AI</option>
+          </select>
+        </div>
+        <div class="fg-fixed"><label>&nbsp;</label>
+          <button class="btn btn-green" onclick="pipeAuto()">Chạy tự động</button>
+        </div>
+        <div class="fg-fixed"><label>&nbsp;</label>
+          <button class="btn btn-blue" onclick="pipeDownload()">Chỉ tải</button>
+        </div>
+      </div>
+      <div class="msg" id="pipeMsg"></div>
+    </div>
+
+    <!-- Process existing file (Gemini) -->
+    <div class="card">
+      <div class="card-title">Xử lý Video (Gemini Cloud)</div>
+      <div class="form-row">
+        <div class="fg" style="flex:3">
+          <label>Đường dẫn video (hoặc chọn từ tab Video)</label>
+          <input type="text" id="procPath" placeholder="D:\Videos\review_phim\video.mp4" />
+        </div>
+        <div class="fg">
+          <label>Chế độ</label>
+          <select id="procMode">
+            <option value="full">Đầy đủ</option>
+            <option value="anticp">Chống sao chép</option>
+            <option value="translate">Dịch</option>
+            <option value="metadata">Metadata</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Chủ đề</label>
+          <input type="text" id="procTopic" value="Uncategorized" />
+        </div>
+        <div class="fg-fixed"><label>&nbsp;</label>
+          <button class="btn btn-purple" onclick="pipeProcess()">Xử lý (Gemini)</button>
+        </div>
+      </div>
+      <div class="msg" id="procMsg"></div>
+    </div>
+
+    <!-- Translate (Whisper offline) -->
+    <div class="card">
+      <div class="card-title">Dịch & Lồng tiếng (Whisper Offline)</div>
+      <div class="form-row">
+        <div class="fg" style="flex:3">
+          <label>Đường dẫn video</label>
+          <input type="text" id="trPath" placeholder="D:\Videos\review_phim\video.mp4" />
+        </div>
+        <div class="fg">
+          <label>Mô hình Whisper</label>
+          <select id="trModel">
+            <option value="tiny">tiny (nhanh)</option>
+            <option value="base" selected>base (mặc định)</option>
+            <option value="small">small (tốt hơn)</option>
+            <option value="medium">medium (chậm)</option>
+            <option value="large">large (tốt nhất, GPU)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Engine TTS</label>
+          <select id="trTts" onchange="toggleVoiceSelect()">
+            <option value="edge" selected>Edge TTS (miễn phí)</option>
+            <option value="gtts">gTTS (Google)</option>
+            <option value="vieneu">VieNeu (cục bộ)</option>
+          </select>
+        </div>
+        <div class="fg" id="voiceGroup">
+          <label>Giọng đọc</label>
+          <select id="trVoice">
+            <optgroup label="Nam">
+              <option value="vi-VN-NamMinhNeural" selected>Nam Minh (nam, tự nhiên)</option>
+            </optgroup>
+            <optgroup label="Nữ">
+              <option value="vi-VN-HoaiMyNeural">Hoài My (nữ, tự nhiên)</option>
+            </optgroup>
+            <optgroup label="Giọng khác">
+              <option value="zh-CN-YunxiNeural">Yunxi (nam, Trung Quốc)</option>
+              <option value="zh-CN-XiaoxiaoNeural">Xiaoxiao (nữ, Trung Quốc)</option>
+              <option value="en-US-GuyNeural">Guy (nam, English)</option>
+              <option value="en-US-JennyNeural">Jenny (nữ, English)</option>
+              <option value="ja-JP-KeitaNeural">Keita (nam, Nhật)</option>
+              <option value="ko-KR-InJoonNeural">InJoon (nam, Hàn)</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fg">
+          <label>Ngôn ngữ gốc</label>
+          <select id="trLang">
+            <option value="zh" selected>Tiếng Trung (zh)</option>
+            <option value="ja">Tiếng Nhật (ja)</option>
+            <option value="ko">Tiếng Hàn (ko)</option>
+            <option value="en">Tiếng Anh (en)</option>
+            <option value="auto">Tự nhận diện</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Tùy chọn</label>
+          <label style="flex-direction:row;display:flex;align-items:center;gap:6px;padding:9px 0">
+            <input type="checkbox" id="trKeepOrig"> Giữ âm gốc (trộn -20dB)
+          </label>
+        </div>
+        <div class="fg-fixed"><label>&nbsp;</label>
+          <button class="btn btn-orange" onclick="pipeTranslate()">Dịch (Whisper)</button>
+        </div>
+      </div>
+      <div class="msg" id="trMsg"></div>
+    </div>
+
+    <!-- Channel Scan -->
+    <div class="card">
+      <div class="card-title">Quét kênh (Google Sheet)</div>
+      <p style="font-size:12px;color:#666;margin-bottom:10px">Quét tất cả kênh Active trong Google Sheet, tải video mới, xử lý tự động.</p>
+      <div class="form-row">
+        <div class="fg-fixed">
+          <button class="btn btn-purple" onclick="pipeScan()">Quét kênh</button>
+        </div>
+      </div>
+      <div class="msg" id="scanMsg"></div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- TAB: VIDEOS -->
+  <!-- ============================================ -->
+  <div id="tab-videos" class="tab-panel">
+    <div class="form-row" style="margin-bottom:14px">
+      <div class="fg-fixed">
+        <button class="btn btn-ghost btn-sm" onclick="loadVideos()">Làm mới</button>
+      </div>
+      <div class="fg-fixed">
+        <button class="btn btn-purple btn-sm" id="btnProcSelected" onclick="processSelected()" disabled>Xử lý đã chọn</button>
+      </div>
+      <div class="fg-fixed">
+        <button class="btn btn-orange btn-sm" id="btnTrSelected" onclick="translateSelected()" disabled>Dịch đã chọn</button>
+      </div>
+      <span id="selectedInfo" style="font-size:11px;color:#666;margin-left:8px"></span>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Video đã tải <span id="dlCount" style="color:#7c6fff;font-weight:400"></span></div>
+        <div class="vid-list" id="dlList"><div class="empty-state">Đang tải...</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Video đã xử lý <span id="edCount" style="color:#22c55e;font-weight:400"></span></div>
+        <div class="vid-list" id="edList"><div class="empty-state">Đang tải...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% raw %}
+<script>
+// ─────── State ─────────────────────────────────────
+let selectedVideo = null;
+const SVC_NAMES = {ffmpeg:'FFmpeg',tts:'VieNeu TTS',gemini:'Gemini AI'};
+const SVC_ICONS = {ffmpeg:'&#x1F3AC;',tts:'&#x1F50A;',gemini:'&#x1F916;'};
+
+// ─────── Tabs ──────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+    if(t.dataset.tab==='videos') loadVideos();
+  });
+});
+
+// ─────── Load data ─────────────────────────────────
+async function loadAll(){
+  try{
+    const r=await fetch('/api/status');const d=await r.json();
+    if(!d.ok)return;
+    document.getElementById('serverTime').textContent=d.server_time;
+    renderSvc(d.services);renderStats(d.stats);
+    const tasks=[...d.active_tasks,...d.recent_tasks.filter(t=>!['pending','running'].includes(t.status))].slice(0,20);
+    renderTasks(tasks);renderLogs(d.recent_logs);
+  }catch(e){console.error(e)}
+}
+
+function renderSvc(svcs){
+  const el=document.getElementById('servicesRow');
+  const order=['ffmpeg','gemini','tts'];
+  const skip=['ixbrowser','adb'];
+  const all=[...order,...Object.keys(svcs).filter(k=>!order.includes(k)&&!skip.includes(k))];
+  el.innerHTML=all.map(k=>{
+    const s=svcs[k]||{status:'unknown',detail:''};
+    return `<div class="svc"><div class="dot dot-${s.status}"></div><span><b>${SVC_ICONS[k]||''} ${SVC_NAMES[k]||k}</b> <span style="color:#666">${s.detail||''}</span></span></div>`;
+  }).join('');
+}
+
+function renderStats(s){
+  document.getElementById('sTotal').textContent=s.total||0;
+  document.getElementById('sRun').textContent=s.running||0;
+  document.getElementById('sDone').textContent=s.done||0;
+  document.getElementById('sErr').textContent=s.error||0;
+  document.getElementById('sToday').textContent=s.today_done||0;
+}
+
+let _expandedTask=null;
+function renderTasks(tasks){
+  const el=document.getElementById('tasksList');
+  if(!tasks.length){el.innerHTML='<div class="empty-state">Chưa có tác vụ</div>';return}
+  const icons={download:'\u2B07\uFE0F',video:'\uD83C\uDFAC',auto:'\u26A1',translate:'\uD83C\uDF10',channel_scan:'\uD83D\uDD0D',facebook:'\uD83D\uDC64',boxphone:'\uD83D\uDCF1'};
+  // Track if any tasks are running for smart refresh
+  _hasRunning=tasks.some(t=>['running','pending'].includes(t.status));
+  el.innerHTML=tasks.map(t=>{
+    const run=['running','pending'].includes(t.status);
+    const fc=t.status==='done'?'pfill-done':t.status==='error'?'pfill-err':'pfill-run';
+    const p=t.progress||0;
+    const stopBtn=run?`<button class="btn btn-sm" style="background:#ef4444;color:#fff;padding:2px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer;margin-left:8px" onclick="event.stopPropagation();cancelTask('${t.task_id}')">Dừng</button>`:'';
+    const expanded=(_expandedTask===t.task_id);
+    const detailHtml=expanded?buildTaskDetail(t):'';
+    return `<div class="task" onclick="toggleTaskDetail('${t.task_id}')"><div class="task-top"><div><div class="task-name">${icons[t.task_type]||'\uD83D\uDCCB'} ${t.name||t.task_id}</div><div class="task-sub">${t.updated_str||''} \xB7 ${t.task_type}</div></div><span class="badge badge-${t.status} ${run?'pulse':''}">${{pending:'\u23F3 Ch\u1edd',running:'\u2699\uFE0F Ch\u1ea1y',done:'\u2705 Xong',error:'\u274C L\u1ed7i'}[t.status]||t.status}${stopBtn}</span></div><div class="pbar"><div class="pfill ${fc}" style="width:${p}%"></div></div><div class="task-msg">${t.message||''} ${run?`(${p}%)`:''}</div>${detailHtml}</div>`;
+  }).join('');
+}
+function toggleTaskDetail(taskId){
+  _expandedTask=(_expandedTask===taskId)?null:taskId;
+  loadAll();
+}
+function buildTaskDetail(t){
+  const d=t.data||{};
+  const rows=[];
+  if(d.url)rows.push(`<div class="td-row"><span class="td-label">URL</span><span style="color:#7c6fff;word-break:break-all">${d.url}</span></div>`);
+  if(d.input)rows.push(`<div class="td-row"><span class="td-label">Input</span><span>${d.input}</span></div>`);
+  if(d.quality)rows.push(`<div class="td-row"><span class="td-label">Ch\u1ea5t l\u01B0\u1EE3ng</span><span>${d.quality}</span></div>`);
+  if(d.model)rows.push(`<div class="td-row"><span class="td-label">Model</span><span>${d.model}</span></div>`);
+  if(d.tts)rows.push(`<div class="td-row"><span class="td-label">TTS</span><span>${d.tts}</span></div>`);
+  if(t.result){
+    const r=t.result;
+    if(r.file_path)rows.push(`<div class="td-row"><span class="td-label">Output</span><span style="color:#22c55e;cursor:pointer" onclick="event.stopPropagation();previewVideo('${r.file_path.replace(/\\/g,'\\\\\\\\')}')">${r.file_path.split('\\').pop()} \u25B6</span></div>`);
+    if(r.platform)rows.push(`<div class="td-row"><span class="td-label">Platform</span><span>${r.platform}</span></div>`);
+  }
+  rows.push(`<div class="td-row"><span class="td-label">Task ID</span><span style="font-family:monospace;font-size:10px">${t.task_id}</span></div>`);
+  return `<div class="task-detail">${rows.join('')}</div>`;
+}
+
+function renderLogs(logs){
+  const el=document.getElementById('logList');
+  if(!logs.length){el.innerHTML='<div class="empty-state">Chưa có nhật ký</div>';return}
+  el.innerHTML=logs.map(l=>`<div class="log"><span class="log-t">${l.time_str}</span><span class="log-m ${l.level==='error'?'err':''}">${l.message}</span></div>`).join('');
+}
+
+// ─────── Toast notifications ─────────────────
+let _toastWrap=null;
+function toast(msg,type='info',duration=4000){
+  if(!_toastWrap){_toastWrap=document.createElement('div');_toastWrap.className='toast-wrap';document.body.appendChild(_toastWrap)}
+  const t=document.createElement('div');
+  t.className=`toast toast-${type}`;
+  t.textContent=msg;
+  _toastWrap.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},duration);
+}
+
+// ─────── Pipeline actions ──────────────────────
+let _submitting=false;
+async function postPipe(endpoint,body,msgEl){
+  if(_submitting)return;
+  _submitting=true;
+  document.querySelectorAll('.btn').forEach(b=>b.style.opacity='0.5');
+  const m=document.getElementById(msgEl);
+  m.textContent='Đang xử lý...';m.style.color='#7c6fff';
+  try{
+    const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    m.style.color=d.ok?'#22c55e':'#ef4444';
+    m.textContent=d.ok?`\u2705 ${d.message} (${d.task_id})`:`\u274C ${d.error}`;
+    if(d.ok){toast(d.message,'ok');setTimeout(loadAll,1000)}
+    else toast(d.error||'Lỗi','err');
+  }catch(e){m.style.color='#ef4444';m.textContent='\u274C Lỗi kết nối';toast('Mất kết nối server','err')}
+  finally{_submitting=false;document.querySelectorAll('.btn').forEach(b=>b.style.opacity='1')}
+}
+
+function pipeAuto(){
+  const url=document.getElementById('pUrl').value.trim();
+  const topic=document.getElementById('pTopic').value.trim()||'Uncategorized';
+  const quality=document.getElementById('pQuality').value;
+  if(!url){toast('Vui lòng nhập link video','err');return}
+  postPipe('/api/pipeline/auto',{url,topic,quality},'pipeMsg');
+  document.getElementById('pUrl').value='';
+}
+
+function pipeDownload(){
+  const url=document.getElementById('pUrl').value.trim();
+  const topic=document.getElementById('pTopic').value.trim()||'Uncategorized';
+  const quality=document.getElementById('pQuality').value;
+  if(!url){toast('Vui lòng nhập link video','err');return}
+  postPipe('/api/pipeline/download',{url,topic,quality},'pipeMsg');
+  document.getElementById('pUrl').value='';
+}
+
+function pipeProcess(){
+  const input_path=document.getElementById('procPath').value.trim();
+  const mode=document.getElementById('procMode').value;
+  const topic=document.getElementById('procTopic').value.trim()||'Uncategorized';
+  if(!input_path){toast('Nhập đường dẫn video hoặc chọn từ tab Video','err');return}
+  postPipe('/api/pipeline/process',{input_path,mode,topic},'procMsg');
+}
+
+function pipeTranslate(){
+  const input_path=document.getElementById('trPath').value.trim();
+  const model=document.getElementById('trModel').value;
+  const tts=document.getElementById('trTts').value;
+  const lang_src=document.getElementById('trLang').value;
+  const keep_original_audio=document.getElementById('trKeepOrig').checked;
+  const edge_voice=document.getElementById('trVoice').value;
+  if(!input_path){toast('Nhập đường dẫn video hoặc chọn từ tab Video','err');return}
+  postPipe('/api/pipeline/translate',{input_path,model,tts,lang_src,keep_original_audio,edge_voice},'trMsg');
+}
+
+function toggleVoiceSelect(){
+  const tts=document.getElementById('trTts').value;
+  document.getElementById('voiceGroup').style.display=(tts==='edge')?'flex':'none';
+}
+
+function pipeScan(){
+  postPipe('/api/pipeline/channel-scan',{},'scanMsg');
+}
+
+// ─────── Videos tab ────────────────────────────────
+async function loadVideos(){
+  try{
+    const r=await fetch('/api/videos/list');const d=await r.json();
+    if(!d.ok)return;
+    renderVidList('dlList',d.downloaded,'dlCount');
+    renderVidList('edList',d.processed,'edCount');
+  }catch(e){console.error(e)}
+}
+
+function renderVidList(elId,vids,countId){
+  const el=document.getElementById(elId);
+  document.getElementById(countId).textContent=`(${vids.length})`;
+  if(!vids.length){el.innerHTML='<div class="empty-state">Không tìm thấy video</div>';return}
+  el.innerHTML=vids.map(v=>{
+    const esc=v.path.replace(/\\/g,'\\\\');
+    return `<div class="vid" data-path="${v.path}" onclick="selectVid(this,'${esc}')">
+      <div class="vid-icon">\uD83C\uDFAC</div>
+      <div class="vid-info"><div class="vid-name" title="${v.name}">${v.name}</div><div class="vid-meta">${v.rel_path} \xB7 ${v.modified}</div></div>
+      <div class="vid-size">${v.size_mb}MB</div>
+      <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px" onclick="event.stopPropagation();previewVideo('${esc}')">\u25B6</button>
+    </div>`;
+  }).join('');
+}
+
+function selectVid(el,path){
+  document.querySelectorAll('.vid').forEach(v=>v.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedVideo=path;
+  // Auto-fill pipeline forms
+  document.getElementById('procPath').value=path;
+  document.getElementById('trPath').value=path;
+  document.getElementById('btnProcSelected').disabled=false;
+  document.getElementById('btnTrSelected').disabled=false;
+  document.getElementById('selectedInfo').textContent='Đã chọn: '+path.split('\\').pop();
+}
+
+function processSelected(){
+  if(!selectedVideo)return;
+  document.getElementById('procPath').value=selectedVideo;
+  document.querySelectorAll('.tab')[1].click(); // Switch to Pipeline tab
+  document.getElementById('procPath').scrollIntoView({behavior:'smooth'});
+}
+
+function translateSelected(){
+  if(!selectedVideo)return;
+  document.getElementById('trPath').value=selectedVideo;
+  document.querySelectorAll('.tab')[1].click();
+  document.getElementById('trPath').scrollIntoView({behavior:'smooth'});
+}
+
+// ─────── Cancel task ──────────────────────────────
+async function cancelTask(taskId){
+  try{
+    const r=await fetch(`/api/task/${taskId}/cancel`,{method:'POST'});
+    const d=await r.json();
+    if(d.ok){toast('Đã dừng tác vụ','info');setTimeout(loadAll,500)}
+  }catch(e){console.error(e)}
+}
+
+// ─────── Video preview ────────────────────────────
+function previewVideo(path){
+  let modal=document.getElementById('videoModal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='videoModal';modal.className='modal-bg';
+    modal.innerHTML='<div class="modal-box"><button class="modal-close" onclick="closePreview()">&times;</button><video controls autoplay id="previewPlayer"></video><div id="previewName" style="margin-top:8px;font-size:12px;color:#888"></div></div>';
+    modal.addEventListener('click',e=>{if(e.target===modal)closePreview()});
+    document.body.appendChild(modal);
+  }
+  document.getElementById('previewPlayer').src=`/api/video/serve?path=${encodeURIComponent(path)}`;
+  document.getElementById('previewName').textContent=path.split('\\').pop();
+  modal.classList.add('show');
+}
+function closePreview(){
+  const m=document.getElementById('videoModal');
+  if(m){m.classList.remove('show');document.getElementById('previewPlayer').src=''}
+}
+
+// ─────── System info ──────────────────────────────
+async function loadSystemInfo(){
+  try{
+    const r=await fetch('/api/system-info');const d=await r.json();
+    if(!d.ok)return;
+    // GPU
+    const g=d.gpu||{};
+    const gpuIcon=g.device==='cuda'?'\uD83D\uDE80':'\uD83D\uDDA5\uFE0F';
+    document.getElementById('sysGpu').innerHTML=`${gpuIcon} <b>${g.name||'N/A'}</b>${g.vram_gb?' ('+g.vram_gb+'GB)':''}`;
+    // Disk
+    const dk=d.disk||{};
+    const dv=dk.Videos||dk.Edited||{};
+    if(dv.free_gb!==undefined)document.getElementById('sysDisk').innerHTML=`\uD83D\uDCBE <b>${dv.free_gb}GB</b> tr\u1ed1ng / ${dv.total_gb}GB (${dv.percent}%)`;
+    // Whisper models
+    const wm=(d.whisper_models||[]).filter(m=>m.downloaded);
+    const wmNames=wm.map(m=>m.name).join(', ')||'ch\u01B0a t\u1EA3i';
+    document.getElementById('sysWhisper').innerHTML=`\uD83C\uDFA4 Whisper: <b>${wmNames}</b>`;
+  }catch(e){console.error('sysinfo',e)}
+}
+
+// ─────── Mini chart ────────────────────────────────
+async function loadMiniChart(){
+  try{
+    const r=await fetch('/api/task-stats');const d=await r.json();
+    if(!d.ok||!d.days)return;
+    const el=document.getElementById('miniChart');
+    const maxVal=Math.max(1,...d.days.map(x=>x.done+x.error));
+    el.innerHTML=d.days.map(x=>{
+      const dH=Math.round(x.done/maxVal*56)||0;
+      const eH=Math.round(x.error/maxVal*56)||0;
+      const label=x.date.slice(5);
+      return `<div class="chart-bar-group"><div class="chart-bars"><div class="chart-bar chart-bar-done" style="height:${dH}px" title="\u2705 ${x.done}"></div><div class="chart-bar chart-bar-err" style="height:${eH}px" title="\u274C ${x.error}"></div></div><div class="chart-label">${label}</div></div>`;
+    }).join('');
+  }catch(e){console.error('chart',e)}
+}
+
+// ─────── Smart auto-refresh ────────────────────────
+let _hasRunning=false;
+let _refreshTimer=null;
+function scheduleRefresh(){
+  if(_refreshTimer)clearTimeout(_refreshTimer);
+  const interval=_hasRunning?2000:8000;
+  _refreshTimer=setTimeout(()=>{loadAll();scheduleRefresh()},interval);
+}
+
+// ─────── Init ──────────────────────────────────────
+loadAll();
+loadSystemInfo();
+loadMiniChart();
+scheduleRefresh();
+setInterval(loadSystemInfo,30000);
+setInterval(loadMiniChart,60000);
+</script>{% endraw %}
+</body>
+</html>

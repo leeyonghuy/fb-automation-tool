@@ -18,6 +18,12 @@ from typing import Optional
 COOKIES_DIR = Path(__file__).parent / "cookies"
 COOKIES_DIR.mkdir(exist_ok=True)
 
+try:
+    from debug_utils import screenshot_on_error  # type: ignore
+except ImportError:
+    async def screenshot_on_error(page, context_name="error"):  # type: ignore[no-redef]
+        return ""
+
 
 # ─────────────────────────────────────────────
 # Helpers
@@ -184,7 +190,23 @@ async def login_with_password(page, email: str, password: str,
 
     except Exception as e:
         print(f"[fb_login] Login error for {email}: {e}")
+        await screenshot_on_error(page, f"login_error_{email.split('@')[0]}")
         return "error"
+
+
+async def login_by_password(page, email: str, password: str,
+                             two_fa_secret: str = "") -> dict:
+    """
+    Wrapper cho login_with_password trả về dict thay vì string.
+    Giúp các caller (app.py routes) xử lý đồng nhất:
+        {"success": bool, "status": str, "error": str}
+    """
+    status = await login_with_password(page, email, password, two_fa_secret)
+    return {
+        "success": status == "logged_in",
+        "status": status,
+        "error": "" if status == "logged_in" else status,
+    }
 
 
 async def handle_2fa(page, secret: str) -> str:

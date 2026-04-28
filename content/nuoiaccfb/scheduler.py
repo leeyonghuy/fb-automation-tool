@@ -278,8 +278,98 @@ async def run_daily_routine(config_file: str = None):
         log("[scheduler] === Running Interactions ===")
         interact_cfg = config.get("interact_config")
         await run_interact(accounts, interact_cfg)
+        await asyncio.sleep(60)
+
+    # Publish queue — chạy sau interact
+    queue_hour = config.get("queue_hour", 20)  # default 8 PM
+    if now_hour >= queue_hour:
+        log("[scheduler] === Running Publish Queue ===")
+        await run_publish_queue(limit=config.get("queue_limit", 20))
 
     log("[scheduler] === Daily Routine Complete ===")
+
+
+# ─────────────────────────────────────────────
+# Publish Queue Runner
+# ─────────────────────────────────────────────
+
+async def run_publish_queue(limit: int = 20) -> list:
+    """
+    Chạy hàng đợi đăng bài từ publish_queue.
+    Tự động lấy các item pending và đăng lên page/reel.
+    """
+    log("[scheduler] === Running Publish Queue ===")
+    results = []
+    try:
+        from publish_queue import get_pending_items, mark_done, mark_failed
+        from ix_browser import connect_playwright, disconnect_playwright
+        from fb_page_post import post_to_page, post_reel_to_page
+
+        items = get_pending_items(limit=limit)
+        log(f"[scheduler] Publish queue: {len(items)} item(s) pending")
+
+        for i, item in enumerate(items):
+            page_url = item.get("page_url", "")
+            post_type = item.get("post_type", "reel")
+            profile_id = item.get("profile_id")
+            item_id = item.get("id", "")
+
+            log(f"[scheduler] [{i+1}/{len(items)}] {post_type} → {page_url}")
+
+            if not profile_id:
+                log(f"[scheduler]   ✗ Thiếu profile_id")
+                mark_failed(item_id, "missing profile_id")
+                results.append({"id": item_id, "success": False, "error": "missing profile_id"})
+                continue
+
+            pw, browser, ctx, playwright_page = await connect_playwright(
+                profile_id, page_url or "https://www.facebook.com")
+            if not playwright_page:
+                log(f"[scheduler]   ✗ Browser lỗi")
+                mark_failed(item_id, "browser_failed")
+                results.append({"id": item_id, "success": False, "error": "browser_failed"})
+                continue
+
+            try:
+                if post_type == "reel":
+                    r = await post_reel_to_page(
+                        playwright_page, page_url,
+                        item.get("video_path", ""),
+                        item.get("caption", ""))
+                else:
+                    r = await post_to_page(
+                        playwright_page, page_url,
+                        item.get("caption", item.get("content", "")),
+                        item.get("images", []))
+
+                if r.get("success"):
+                    mark_done(item_id)
+                    log(f"[scheduler]   ✓ Đăng thành công")
+                    results.append({"id": item_id, "success": True})
+                elif r.get("skipped"):
+                    mark_done(item_id, note="skipped_dedup")
+                    log(f"[scheduler]   ⚠ Bỏ qua (dedup)")
+                    results.append({"id": item_id, "success": True, "skipped": True})
+                else:
+                    err = r.get("error", "unknown")
+                    mark_failed(item_id, err)
+                    log(f"[scheduler]   ✗ {err}")
+                    results.append({"id": item_id, "success": False, "error": err})
+            except Exception as e:
+                mark_failed(item_id, str(e))
+                log(f"[scheduler]   ✗ Exception: {e}")
+                results.append({"id": item_id, "success": False, "error": str(e)})
+            finally:
+                await disconnect_playwright(pw, browser, profile_id)
+
+            await asyncio.sleep(random.uniform(15, 30))
+
+    except Exception as e:
+        log(f"[scheduler] Publish queue error: {e}")
+
+    ok = sum(1 for r in results if r.get("success"))
+    log(f"[scheduler] Publish queue done: {ok}/{len(results)} success")
+    return results
 
 
 # ─────────────────────────────────────────────
@@ -288,7 +378,7 @@ async def run_daily_routine(config_file: str = None):
 
 async def main():
     parser = argparse.ArgumentParser(description="Facebook Automation Scheduler")
-    parser.add_argument("--mode", choices=["warmup", "post", "interact", "login", "all"],
+    parser.add_argument("--mode", choices=["warmup", "post", "interact", "login", "all", "queue"],
                         default="warmup", help="Task mode")
     parser.add_argument("--config", help="Config JSON file path")
     parser.add_argument("--intensity", choices=["light", "medium", "normal"],
@@ -314,6 +404,8 @@ async def main():
         await run_interact(accounts)
     elif args.mode == "login":
         await run_login(accounts)
+    elif args.mode == "queue":
+        await run_publish_queue()
     elif args.mode == "all":
         await run_daily_routine(args.config)
 

@@ -18,10 +18,19 @@ import re
 from pathlib import Path
 from datetime import datetime
 
+# Cho phép import config.py ở project root
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import (  # noqa: E402
+    LOG_DIR,
+    EDITED_VIDEO_DIR as _EDITED_DIR,
+    GEMINI_API_KEY as _GEMINI_KEY,
+    FFMPEG_CMD as _FFMPEG,
+    FFPROBE_CMD as _FFPROBE,
+)
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
-LOG_DIR = r"D:\Contenfactory\logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
@@ -35,14 +44,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Config
+# Config (đọc từ config.py / .env)
 # ---------------------------------------------------------------------------
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")  # Set env var GEMINI_API_KEY
-EDITED_VIDEO_DIR = r"D:\Videos\Edited"
-FFMPEG_CMD = os.environ.get("FFMPEG_CMD", "ffmpeg")
-FFPROBE_CMD = os.environ.get("FFPROBE_CMD", "ffprobe")
+GEMINI_API_KEY = _GEMINI_KEY
+EDITED_VIDEO_DIR = _EDITED_DIR
+FFMPEG_CMD = _FFMPEG
+FFPROBE_CMD = _FFPROBE
 
 os.makedirs(EDITED_VIDEO_DIR, exist_ok=True)
+
+
+# Vùng band dưới đáy chứa sub gốc (cũng là vùng blur + render VN sub)
+# Tỉ lệ % theo chiều cao video
+SUB_BAND_RATIO = 0.18   # 18% bottom
+
+
+def escape_ffmpeg_path(p: str) -> str:
+    """
+    Escape đường dẫn cho ffmpeg filter (subtitles=, etc.).
+    Trên Windows cần escape chỉ dấu ':' của ổ đĩa (D: → D\:),
+    KHÔNG escape mọi ':'.
+    """
+    p = p.replace("\\", "/")
+    return re.sub(r'^([A-Za-z]):', r'\1\\:', p)
 
 
 # ---------------------------------------------------------------------------
@@ -95,75 +119,96 @@ def build_output_path(input_path: str, suffix: str = "_edited") -> str:
 
 def apply_anticp_template(input_path: str, output_path: str = None,
                            brand_text: str = "Sayaz",
-                           flip: bool = None) -> dict:
+                           flip: bool = False) -> dict:
     """
-    Áp dụng template chống bản quyền:
-    - Crop 2% viền + scale lại về kích thước gốc
-    - Thay đổi tốc độ ngẫu nhiên ±1.5%
-    - Điều chỉnh màu nhẹ
-    - Watermark chữ thương hiệu mờ 98% (alpha ~5/255)
-    - Flip ngang ngẫu nhiên (hoặc theo tham số)
-    - Xóa metadata
-    - Re-encode H.264/AAC
+    Template anti-copyright HIỆN ĐẠI (2025):
+    - KHÔNG flip ngang (làm chữ trong video bị ngược, xấu + fake)
+    - Zoom nhẹ 1.04x (thay crop+scale, giữ chất lượng)
+    - Color grade tinh tế (contrast/saturation/gamma nhẹ)
+    - Sharpen nhẹ + grain mỏng (đổi pixel-level fingerprint)
+    - Watermark góc phải-trên, alpha 0.35 (visible branding)
+    - Audio pitch shift ±2% + EQ band (cái TikTok ACTUALLY check)
+    - Force GOP/keyframe interval (đổi container hash)
+    - Xóa metadata, re-encode H.264 yuv420p
     """
     if not output_path:
         output_path = build_output_path(input_path, "_t1")
 
     width, height = get_video_dimensions(input_path)
 
-    # Random speed factor: 0.985 ~ 1.015
-    speed_factor = round(random.uniform(0.985, 1.015), 4)
-    audio_tempo = round(1.0 / speed_factor, 4)  # compensate audio tempo
+    # Random nhẹ: speed 0.97-1.03, color grade, font scale
+    speed_factor = round(random.uniform(0.97, 1.03), 4)
+    audio_tempo  = round(1.0 / speed_factor, 4)
+    contrast     = round(random.uniform(1.03, 1.07), 3)
+    saturation   = round(random.uniform(1.04, 1.10), 3)
+    gamma        = round(random.uniform(0.95, 1.02), 3)
+    zoom         = round(random.uniform(1.03, 1.06), 3)
 
-    # Flip: random nếu không chỉ định
-    do_flip = flip if flip is not None else random.choice([True, False])
+    # Đảm bảo dim chia hết cho 2 (libx264 yêu cầu)
+    new_w = int(width  * zoom) // 2 * 2
+    new_h = int(height * zoom) // 2 * 2
+    crop_x = (new_w - width)  // 2
+    crop_y = (new_h - height) // 2
 
-    # Video filters
     vf_parts = []
 
-    # 1. Crop 2% + scale lại
-    crop_w = int(width * 0.98)
-    crop_h = int(height * 0.98)
-    crop_x = int(width * 0.01)
-    crop_y = int(height * 0.01)
-    vf_parts.append(f"crop={crop_w}:{crop_h}:{crop_x}:{crop_y}")
-    vf_parts.append(f"scale={width}:{height}")
+    # 1. Zoom in 1.03-1.06x (scale up rồi crop center) - cleaner than crop+scale
+    vf_parts.append(f"scale={new_w}:{new_h}:flags=lanczos")
+    vf_parts.append(f"crop={width}:{height}:{crop_x}:{crop_y}")
 
-    # 2. Flip ngang
-    if do_flip:
+    # 2. (Optional) flip - DEFAULT OFF
+    if flip:
         vf_parts.append("hflip")
 
-    # 3. Điều chỉnh màu nhẹ
-    brightness = round(random.uniform(0.01, 0.03), 3)
-    saturation = round(random.uniform(1.02, 1.05), 3)
-    vf_parts.append(f"eq=brightness={brightness}:saturation={saturation}")
+    # 3. Color grade tinh tế
+    vf_parts.append(f"eq=contrast={contrast}:saturation={saturation}:gamma={gamma}")
 
-    # 4. Watermark text "Sayaz" - mờ 98% (alpha=0.02)
-    font_size = max(24, int(height * 0.04))
-    # Đặt ở giữa dưới, alpha cực thấp
+    # 4. Sharpen nhẹ + grain mỏng (đổi pixel hash, mắt thường khó thấy)
+    vf_parts.append("unsharp=5:5:0.6:5:5:0.0")
+    vf_parts.append("noise=alls=4:allf=t")
+
+    # 5. Watermark góc phải-trên - visible nhẹ (alpha 0.35)
+    font_size = max(18, int(height * 0.025))
     vf_parts.append(
         f"drawtext=text='{brand_text}':fontsize={font_size}:"
-        f"fontcolor=white@0.02:x=(w-text_w)/2:y=h-th-20"
+        f"fontcolor=white@0.35:borderw=1:bordercolor=black@0.4:"
+        f"x=w-text_w-20:y=20"
     )
 
-    # 5. Speed (setpts)
+    # 6. Speed (setpts) - thay đổi timing
     vf_parts.append(f"setpts={round(1.0/speed_factor, 4)}*PTS")
 
-    vf = ",".join(vf_parts)
-    af = f"asetrate=44100*{speed_factor},aresample=44100,atempo={audio_tempo}"
+    # 7. Đảm bảo yuv420p cho compatibility
+    vf_parts.append("format=yuv420p")
 
+    vf = ",".join(vf_parts)
+
+    # Audio: pitch shift + EQ band (TikTok check audio fingerprint là chính)
+    # asetrate đổi pitch, atempo bù lại tempo gốc
+    af = (
+        f"asetrate=44100*{speed_factor},aresample=44100,"
+        f"atempo={audio_tempo},"
+        f"highpass=f=80,lowpass=f=15500,"
+        f"acompressor=threshold=-18dB:ratio=2:attack=20:release=250"
+    )
+
+    # Force keyframe mỗi 2s → đổi GOP/hash
     cmd = [
         FFMPEG_CMD, "-y", "-i", input_path,
         "-vf", vf,
         "-af", af,
         "-map_metadata", "-1",
-        "-c:v", "libx264", "-crf", "23", "-preset", "fast",
-        "-c:a", "aac", "-b:a", "128k",
+        "-map_chapters", "-1",
+        "-c:v", "libx264", "-crf", "21", "-preset", "medium",
+        "-pix_fmt", "yuv420p",
+        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0",
+        "-c:a", "aac", "-b:a", "160k", "-ar", "44100",
+        "-movflags", "+faststart",
         output_path
     ]
 
-    logger.info(f"[Tầng 1] Xử lý anti-copyright: {input_path}")
-    logger.info(f"  speed={speed_factor}, flip={do_flip}, brightness={brightness}")
+    logger.info(f"[Tầng 1] Anti-copyright (modern): {input_path}")
+    logger.info(f"  speed={speed_factor} zoom={zoom} contrast={contrast} sat={saturation} gamma={gamma} flip={flip}")
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -207,7 +252,7 @@ def transcribe_and_translate_gemini(audio_path: str, source_lang: str = "zh") ->
         logger.info("  Upload audio lên Gemini...")
         audio_file = genai.upload_file(audio_path, mime_type="audio/wav")
 
-        model = genai.GenerativeModel("gemini-1.5-pro")
+        model = genai.GenerativeModel("gemini-2.5-flash")
 
         prompt = """Bạn là chuyên gia phiên âm và dịch thuật.
 Hãy phiên âm toàn bộ nội dung audio này (tiếng Trung/Quảng Đông) và dịch sang tiếng Việt.
@@ -257,54 +302,84 @@ def segments_to_srt(segments: list, srt_path: str):
 
 
 def blur_original_subtitles(video_path: str, output_path: str,
-                             height_ratio: float = 0.12) -> bool:
+                             height_ratio: float = SUB_BAND_RATIO) -> bool:
     """
-    Làm mờ vùng phụ đề gốc (dòng dưới cùng ~12% chiều cao).
+    Mask vùng phụ đề gốc bằng GAUSSIAN BLUR + EDGE FEATHER.
+    height_ratio phải KHỚP với vùng VN sub render bên trên (xem add_vietnamese_subtitles).
     """
     _, height = get_video_dimensions(video_path)
     blur_h = int(height * height_ratio)
     blur_y = height - blur_h
+    feather = max(8, blur_h // 6)
 
-    # Dùng boxblur trên vùng crop rồi overlay lại
+    # gblur (Gaussian) cho mượt hơn boxblur, + alpha gradient ở mép trên cho feather
     vf = (
         f"[0:v]split[main][blur];"
-        f"[blur]crop=iw:{blur_h}:0:{blur_y},boxblur=20:5[blurred];"
-        f"[main][blurred]overlay=0:{blur_y}"
+        f"[blur]crop=iw:{blur_h + feather}:0:{blur_y - feather},"
+        f"gblur=sigma=18,"
+        f"format=yuva420p,"
+        f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':"
+        f"a='if(lt(Y,{feather}),255*Y/{feather},255)'[blurred];"
+        f"[main][blurred]overlay=0:{blur_y - feather}"
     )
 
     cmd = [
         FFMPEG_CMD, "-y", "-i", video_path,
         "-filter_complex", vf,
-        "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+        "-c:v", "libx264", "-crf", "21", "-preset", "fast",
+        "-pix_fmt", "yuv420p",
         "-c:a", "copy",
         output_path
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     if result.returncode == 0:
-        logger.info(f"  ✓ Blur phụ đề gốc xong")
+        logger.info(f"  ✓ Blur phụ đề gốc (gaussian+feather) xong")
         return True
     else:
-        logger.error(f"  ✗ Blur lỗi: {result.stderr[-200:]}")
+        logger.error(f"  ✗ Blur lỗi: {result.stderr[-300:]}")
         return False
 
 
 def add_vietnamese_subtitles(video_path: str, srt_path: str,
                               output_path: str) -> bool:
-    """Render phụ đề tiếng Việt lên video."""
-    # Escape path for ffmpeg filter
-    srt_escaped = srt_path.replace("\\", "/").replace(":", "\\:")
+    """
+    Render phụ đề tiếng Việt style TIKTOK MODERN:
+    - Kích thước tính theo height video THẬT (qua original_size → ASS units = pixel)
+    - Font Bold + outline đen + shadow, KHÔNG box
+    - Smart wrap (WrapStyle=0)
+    - Vị trí sub: đặt TÂM vào giữa vùng blur (SUB_BAND_RATIO)
+    """
+    srt_escaped = escape_ffmpeg_path(srt_path)
+    w, h = get_video_dimensions(video_path)
 
-    vf = (
-        f"subtitles='{srt_escaped}':force_style='"
-        f"FontName=Arial,FontSize=20,PrimaryColour=&H00FFFFFF,"
-        f"OutlineColour=&H00000000,Outline=2,Alignment=2,"
-        f"MarginV=25'"
+    # libass dùng PlayResY=288 mặc định cho SRT. Đơn vị Style scale × (h/288).
+    # Tất cả tính bằng ASS units (KHÔNG dùng original_size vì nó không đổi PlayResY).
+    ASS_PLAY_Y = 288
+    font_ass = 14                          # → ~14*(h/288) px (vd 1620p → 79px)
+    # MarginV để text-center nằm giữa band:
+    #   center_px = (MarginV + font/2) * (h/288)
+    #   muốn   = SUB_BAND_RATIO * h / 2
+    #   ⇒ MarginV = SUB_BAND_RATIO * 144 - font/2  (h triệt tiêu)
+    margin_v = max(10, int(SUB_BAND_RATIO * ASS_PLAY_Y / 2 - font_ass / 2))
+    margin_lr = 30
+
+    style = (
+        f"FontName=Arial,FontSize={font_ass},Bold=1,"
+        f"PrimaryColour=&H00FFFFFF,"
+        f"OutlineColour=&H00000000,"
+        f"BorderStyle=1,Outline=2,Shadow=0.6,"
+        f"Alignment=2,MarginV={margin_v},MarginL={margin_lr},MarginR={margin_lr},"
+        f"WrapStyle=0,Spacing=0.3"
     )
+
+    vf = f"subtitles='{srt_escaped}':force_style='{style}'"
+    logger.info(f"  Sub style: font={font_ass}ASS (~{int(font_ass*h/ASS_PLAY_Y)}px) marginV={margin_v}ASS (~{int(margin_v*h/ASS_PLAY_Y)}px) band={int(SUB_BAND_RATIO*100)}% video={w}x{h}")
 
     cmd = [
         FFMPEG_CMD, "-y", "-i", video_path,
         "-vf", vf,
-        "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+        "-c:v", "libx264", "-crf", "21", "-preset", "medium",
+        "-pix_fmt", "yuv420p",
         "-c:a", "copy",
         output_path
     ]
@@ -318,29 +393,44 @@ def add_vietnamese_subtitles(video_path: str, srt_path: str,
 
 
 def generate_tts_vietnamese(segments: list, output_audio_path: str,
-                             voice: str = "vi-VN-HoaiMyNeural") -> bool:
+                             voice: str = "Xuân Vĩnh") -> bool:
     """
-    Tạo file audio tiếng Việt từ segments dùng edge-tts.
+    Tạo file audio tiếng Việt từ segments dùng VieNeu-TTS.
     Ghép các đoạn audio theo timestamp.
     """
     try:
-        import edge_tts
-        import asyncio
+        from tts_engine import text_to_speech, is_available
 
-        async def _generate():
-            # Tạo full text
-            full_text = " ".join([s["text_vi"] for s in segments])
-            communicate = edge_tts.Communicate(full_text, voice)
-            await communicate.save(output_audio_path)
+        if not is_available():
+            logger.error("  VieNeu-TTS chưa được cài. Chạy: pip install vieneu --extra-index-url https://pnnbao97.github.io/llama-cpp-python-v0.3.16/cpu/")
+            return False
 
-        asyncio.run(_generate())
-        logger.info(f"  ✓ TTS tiếng Việt xong: {output_audio_path}")
+        # Ghép toàn bộ text thành 1 đoạn
+        full_text = " ".join([s["text_vi"] for s in segments if s.get("text_vi")])
+        if not full_text.strip():
+            logger.warning("  Không có text để TTS")
+            return False
+
+        # VieNeu-TTS xuất WAV, cần convert sang MP3 nếu output_audio_path là .mp3
+        wav_path = output_audio_path.replace(".mp3", ".wav") if output_audio_path.endswith(".mp3") else output_audio_path
+        text_to_speech(full_text, wav_path, voice=voice)
+
+        # Convert WAV -> MP3 nếu cần
+        if output_audio_path.endswith(".mp3") and os.path.exists(wav_path):
+            cmd = [FFMPEG_CMD, "-y", "-i", wav_path, "-b:a", "128k", output_audio_path]
+            result = subprocess.run(cmd, capture_output=True, timeout=60)
+            if result.returncode != 0:
+                # Dùng WAV trực tiếp nếu convert thất bại
+                import shutil
+                shutil.copy2(wav_path, output_audio_path)
+
+        logger.info(f"  ✓ VieNeu-TTS tiếng Việt xong: {output_audio_path}")
         return True
     except ImportError:
-        logger.error("  Chưa cài edge-tts: pip install edge-tts")
+        logger.error("  Không tìm thấy tts_engine.py")
         return False
     except Exception as e:
-        logger.error(f"  Lỗi TTS: {e}")
+        logger.error(f"  Lỗi VieNeu-TTS: {e}")
         return False
 
 
@@ -411,14 +501,15 @@ def apply_translation_layer(input_path: str, output_path: str = None,
         if segments:
             segments_to_srt(segments, srt_path)
 
-        # 4. Blur phụ đề gốc
-        logger.info("  [2.3] Blur phụ đề gốc...")
+        # 4. Blur vùng sub gốc LUÔN (không dùng hộp đen nữa)
+        # Background mờ → sub VN nổi bật lên trên vùng đó
+        logger.info("  [2.3] Blur vùng sub gốc...")
         blur_ok = blur_original_subtitles(input_path, blurred_path)
         working_video = blurred_path if blur_ok else input_path
 
-        # 5. Thêm phụ đề tiếng Việt
+        # 5. Thêm phụ đề tiếng Việt (style TikTok modern - tự che sub gốc)
         if segments and os.path.exists(srt_path):
-            logger.info("  [2.4] Thêm phụ đề tiếng Việt...")
+            logger.info("  [2.4] Render VN subtitle (TikTok modern style)...")
             sub_ok = add_vietnamese_subtitles(working_video, srt_path, subbed_path)
             working_video = subbed_path if sub_ok else working_video
 
@@ -463,7 +554,7 @@ def generate_ai_metadata(video_path: str, segments: list = None,
     try:
         import google.generativeai as genai
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
 
         # Chuẩn bị transcript
         transcript = ""
@@ -560,26 +651,34 @@ def process_video(input_path: str,
 
     segments = []
 
-    # Tầng 1: Anti-copyright
+    # Tầng 1: Anti-copyright (idempotent: skip nếu đã có)
     if mode in ("full", "anticp"):
         t1_out = build_output_path(input_path, "_t1")
-        t1 = apply_anticp_template(input_path, t1_out)
-        if t1["success"]:
+        if os.path.exists(t1_out) and os.path.getsize(t1_out) > 1024:
+            logger.info(f"[Tầng 1] Skip - đã có: {t1_out}")
             result["edited_path"] = t1_out
         else:
-            result["error"] = f"Tầng 1 thất bại: {t1['error']}"
-            return result
+            t1 = apply_anticp_template(input_path, t1_out)
+            if t1["success"]:
+                result["edited_path"] = t1_out
+            else:
+                result["error"] = f"Tầng 1 thất bại: {t1['error']}"
+                return result
 
-    # Tầng 2: Dịch & phụ đề
+    # Tầng 2: Dịch & phụ đề (idempotent)
     if mode in ("full", "translate"):
         t2_input = result["edited_path"]
         t2_out = build_output_path(input_path, "_t2")
-        t2 = apply_translation_layer(t2_input, t2_out, with_tts=with_tts)
-        if t2["success"]:
+        if os.path.exists(t2_out) and os.path.getsize(t2_out) > 1024:
+            logger.info(f"[Tầng 2] Skip - đã có: {t2_out}")
             result["edited_path"] = t2_out
-            segments = t2.get("segments", [])
         else:
-            logger.warning(f"  Tầng 2 thất bại: {t2['error']} - giữ video Tầng 1")
+            t2 = apply_translation_layer(t2_input, t2_out, with_tts=with_tts)
+            if t2["success"]:
+                result["edited_path"] = t2_out
+                segments = t2.get("segments", [])
+            else:
+                logger.warning(f"  Tầng 2 thất bại: {t2['error']} - giữ video Tầng 1")
 
     # Tầng 3: AI Metadata
     if mode in ("full", "metadata"):

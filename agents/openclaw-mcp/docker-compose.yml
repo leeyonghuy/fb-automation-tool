@@ -1,0 +1,37 @@
+# Standalone compose để chạy crawler-mcp trên cùng network với openclaw-gateway.
+# Cách chạy:
+#   docker compose -f docker-compose.yml up -d --build
+#
+# Yêu cầu: file .env nằm cùng thư mục (xem .env.example).
+
+services:
+  crawler-mcp:
+    build: .
+    image: contenfactory/crawler-mcp:latest
+    container_name: crawler-mcp
+    restart: always
+    environment:
+      - PORT=7799
+      - SPREADSHEET_ID=${SPREADSHEET_ID}
+      - SHEET_NAME=${SHEET_NAME:-Crawled}
+      - DEFAULT_TOPIC=${DEFAULT_TOPIC:-}
+      - DEDUPLICATE=${DEDUPLICATE:-true}
+      - GOOGLE_SERVICE_ACCOUNT_JSON_FILE=/secrets/service-account.json
+      - DOUYIN_COOKIES_FILE=/cookies/douyin_cookies.json
+    volumes:
+      # Đường dẫn ngoài là Linux path từ WSL2; khi compose chạy trên Docker
+      # Desktop với WSL backend, mount vẫn hoạt động bình thường.
+      - ${SERVICE_ACCOUNT_FILE}:/secrets/service-account.json:ro
+      - ${DOUYIN_COOKIES_FILE:-/dev/null}:/cookies/douyin_cookies.json:ro
+    networks:
+      - openclaw_net
+    # (tuỳ chọn) expose ra host để debug:
+    # ports:
+    #   - "7799:7799"
+
+networks:
+  # Network do compose `scratch` (chứa openclaw-gateway, n8n, 9router) tạo ra.
+  # Đây là cách join container mới vào cùng mạng đã tồn tại.
+  openclaw_net:
+    external: true
+    name: scratch_ai_network
