@@ -837,21 +837,19 @@
         <div class="page" id="page-proxy">
             <div class="section-title"><i class="fas fa-shield-alt"></i> Quản lý Proxy</div>
             <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">Danh sách Proxy</div>
+                <!-- Cột trái: nhập proxy + test nhanh -->
+                <div class="col-md-5">
+                    <div class="card mb-3">
+                        <div class="card-header">Danh sách Proxy (proxies.txt)</div>
                         <div class="card-body">
-                            <p class="text-muted small">
-                                Mỗi dòng 1 proxy. Hỗ trợ định dạng:<br>
-                                <code>http://host:port</code><br>
-                                <code>http://user:pass@host:port</code><br>
-                                <code>socks5://host:port</code>
+                            <p class="text-muted small mb-2">
+                                Mỗi dòng 1 proxy. Format: <code>host:port</code> hoặc <code>host:port:user:pass</code>
                             </p>
-                            <textarea class="form-control mono" id="proxy-text" rows="14"
-                                placeholder="http://proxy1.example.com:8080&#10;http://user:pass@proxy2.example.com:3128&#10;socks5://proxy3.example.com:1080"></textarea>
+                            <textarea class="form-control mono" id="proxy-text" rows="10"
+                                placeholder="1.2.3.4:1080&#10;1.2.3.4:1080:user:pass"></textarea>
                             <div class="d-flex gap-2 mt-2">
                                 <button class="btn btn-primary flex-fill" onclick="saveProxies()">
-                                    <i class="fas fa-save me-1"></i>Lưu proxy
+                                    <i class="fas fa-save me-1"></i>Lưu
                                 </button>
                                 <button class="btn btn-outline-secondary" onclick="loadProxies()">
                                     <i class="fas fa-refresh me-1"></i>Tải lại
@@ -859,38 +857,95 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header">Kiểm tra proxy</div>
+                        <div class="card-header">Test proxy nhanh</div>
                         <div class="card-body">
-                            <label class="form-label fw-semibold">Nhập proxy cần test</label>
                             <input class="form-control mb-2" id="test-proxy-input"
-                                placeholder="http://user:pass@host:port">
-                            <button class="btn btn-warning w-100 mb-3" onclick="testOneProxy()">
+                                placeholder="socks5://user:pass@host:port">
+                            <button class="btn btn-warning w-100 mb-2" onclick="testOneProxy()">
                                 <i class="fas fa-vial me-2"></i>Test proxy này
                             </button>
                             <div id="test-proxy-result" class="alert alert-secondary small" style="display:none"></div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Cột phải: bảng proxy + quản lý ngày thuê -->
+                <div class="col-md-7">
+                    <!-- Cảnh báo sắp hết hạn -->
+                    <div id="proxy-expiring-alert" style="display:none" class="alert alert-warning small mb-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <span id="proxy-expiring-text"></span>
+                    </div>
+
                     <div class="card">
-                        <div class="card-header">Danh sách proxy đã tải</div>
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Danh sách proxy &amp; ngày thuê</span>
+                            <button class="btn btn-xs btn-outline-info" onclick="loadProxies()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
                         <div class="card-body p-0">
-                            <div class="table-responsive" style="max-height:300px;overflow-y:auto">
+                            <div class="table-responsive" style="max-height:480px;overflow-y:auto">
                                 <table class="table table-sm table-hover mb-0">
-                                    <thead class="table-light">
+                                    <thead class="table-light sticky-top">
                                         <tr>
                                             <th>#</th>
-                                            <th>Proxy</th>
-                                            <th>Test</th>
+                                            <th>Host:Port</th>
+                                            <th>Ghi chú</th>
+                                            <th>Ngày thuê</th>
+                                            <th>Hết hạn</th>
+                                            <th>Còn lại</th>
+                                            <th>Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody id="proxy-list-tbody">
                                         <tr>
-                                            <td colspan="3" class="text-center text-muted py-3">Chưa tải</td>
+                                            <td colspan="7" class="text-center text-muted py-3">Chưa tải</td>
                                         </tr>
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal chỉnh sửa ngày thuê proxy -->
+            <div class="modal fade" id="proxyMetaModal" tabindex="-1">
+                <div class="modal-dialog modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header py-2">
+                            <h6 class="modal-title">Cập nhật thông tin proxy</h6>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="meta-proxy-host">
+                            <input type="hidden" id="meta-proxy-port">
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Host:Port</label>
+                                <input class="form-control form-control-sm" id="meta-proxy-display" readonly>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Ghi chú</label>
+                                <input class="form-control form-control-sm" id="meta-note"
+                                    placeholder="VD: 9router gói 30 ngày">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Ngày bắt đầu thuê</label>
+                                <input type="date" class="form-control form-control-sm" id="meta-rent-date">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Ngày hết hạn</label>
+                                <input type="date" class="form-control form-control-sm" id="meta-expire-date">
+                            </div>
+                            <div class="d-flex gap-2 mt-1">
+                                <button class="btn btn-sm btn-primary flex-fill" onclick="saveProxyMeta()">
+                                    <i class="fas fa-save me-1"></i>Lưu
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProxyConfirm()">
+                                    <i class="fas fa-trash me-1"></i>Xóa
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1505,22 +1560,78 @@
         }
 
         // ─── Proxy ───
+        let _proxyList = [];
+
         async function loadProxies() {
-            const list = await fetch('/api/proxies').then(r => r.json());
-            const lines = list.map(p => p.raw || p.host || JSON.stringify(p)).join('\n');
+            _proxyList = await fetch('/api/proxies').then(r => r.json());
+            // Điền textarea (plain text)
+            const lines = _proxyList.map(p => {
+                if (p.host) {
+                    let s = `${p.host}:${p.port}`;
+                    if (p.user && p.pass) s += `:${p.user}:${p.pass}`;
+                    return s;
+                }
+                return p.raw || JSON.stringify(p);
+            }).join('\n');
             document.getElementById('proxy-text').value = lines;
 
+            // Cảnh báo sắp hết hạn
+            const expiring = _proxyList.filter(p => p.days_left !== null && p.days_left !== undefined && p.days_left <= 3);
+            const alertEl = document.getElementById('proxy-expiring-alert');
+            if (expiring.length > 0) {
+                alertEl.style.display = 'block';
+                document.getElementById('proxy-expiring-text').textContent =
+                    `⚠️ ${expiring.length} proxy sắp hết hạn trong 3 ngày: ` +
+                    expiring.map(p => `${p.host}:${p.port} (còn ${p.days_left} ngày)`).join(', ');
+            } else {
+                alertEl.style.display = 'none';
+            }
+
+            // Render bảng
             const tbody = document.getElementById('proxy-list-tbody');
-            if (!list.length) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Chưa có proxy</td></tr>';
+            if (!_proxyList.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Chưa có proxy</td></tr>';
                 return;
             }
-            tbody.innerHTML = list.map((p, i) => {
-                const raw = p.raw || p.host || JSON.stringify(p);
+            tbody.innerHTML = _proxyList.map((p, i) => {
+                const hostPort = p.host ? `${p.host}:${p.port}` : (p.raw || '?');
+                const note = p.note || '';
+                const rentDate = p.rent_date || '';
+                const expireDate = p.expire_date || '';
+                const daysLeft = p.days_left;
+
+                let daysHtml = '<span class="text-muted">—</span>';
+                if (daysLeft !== null && daysLeft !== undefined) {
+                    if (daysLeft < 0) {
+                        daysHtml = `<span class="badge bg-danger">Hết hạn ${Math.abs(daysLeft)} ngày trước</span>`;
+                    } else if (daysLeft === 0) {
+                        daysHtml = `<span class="badge bg-danger">Hết hạn hôm nay!</span>`;
+                    } else if (daysLeft <= 3) {
+                        daysHtml = `<span class="badge bg-warning text-dark">⚠️ ${daysLeft} ngày</span>`;
+                    } else if (daysLeft <= 7) {
+                        daysHtml = `<span class="badge bg-info">${daysLeft} ngày</span>`;
+                    } else {
+                        daysHtml = `<span class="badge bg-success">${daysLeft} ngày</span>`;
+                    }
+                }
+
+                const proxyStr = p.host ? `socks5://${p.user && p.pass ? p.user + ':' + p.pass + '@' : ''}${p.host}:${p.port}` : (p.raw || '');
+
                 return `<tr>
                   <td>${i + 1}</td>
-                  <td><code style="font-size:0.75rem">${raw}</code></td>
-                  <td><button class="btn btn-xs btn-outline-warning" onclick="testProxyItem('${raw}', this)">Test</button></td>
+                  <td><code style="font-size:0.75rem">${hostPort}</code></td>
+                  <td><small class="text-muted">${note}</small></td>
+                  <td><small>${rentDate || '—'}</small></td>
+                  <td><small>${expireDate || '—'}</small></td>
+                  <td>${daysHtml}</td>
+                  <td class="d-flex gap-1">
+                    <button class="btn btn-xs btn-outline-warning" onclick="testProxyItem('${proxyStr}', this)" title="Test">
+                      <i class="fas fa-vial"></i>
+                    </button>
+                    <button class="btn btn-xs btn-outline-primary" onclick="openProxyMeta(${i})" title="Sửa ngày thuê">
+                      <i class="fas fa-calendar-alt"></i>
+                    </button>
+                  </td>
                 </tr>`;
             }).join('');
         }
@@ -1556,14 +1667,59 @@
         }
 
         async function testProxyItem(proxy, btn) {
-            btn.disabled = true; btn.textContent = '...';
+            btn.disabled = true; btn.innerHTML = '...';
             const r = await fetch('/api/proxies/test', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ proxy })
             }).then(x => x.json());
             btn.disabled = false;
-            if (r.success) { btn.textContent = '✓ ' + r.ip; btn.className = 'btn btn-xs btn-success'; }
-            else { btn.textContent = '✗'; btn.className = 'btn btn-xs btn-danger'; btn.title = r.error; }
+            if (r.success) { btn.innerHTML = '✓ ' + r.ip; btn.className = 'btn btn-xs btn-success'; }
+            else { btn.innerHTML = '✗'; btn.className = 'btn btn-xs btn-danger'; btn.title = r.error; }
+        }
+
+        // Mở modal chỉnh sửa metadata proxy
+        function openProxyMeta(idx) {
+            const p = _proxyList[idx];
+            if (!p || !p.host) return showToast('Proxy này không có metadata', 'warning');
+            document.getElementById('meta-proxy-host').value = p.host;
+            document.getElementById('meta-proxy-port').value = p.port;
+            document.getElementById('meta-proxy-display').value = `${p.host}:${p.port}`;
+            document.getElementById('meta-note').value = p.note || '';
+            document.getElementById('meta-rent-date').value = p.rent_date || '';
+            document.getElementById('meta-expire-date').value = p.expire_date || '';
+            new bootstrap.Modal(document.getElementById('proxyMetaModal')).show();
+        }
+
+        async function saveProxyMeta() {
+            const host = document.getElementById('meta-proxy-host').value;
+            const port = document.getElementById('meta-proxy-port').value;
+            const note = document.getElementById('meta-note').value;
+            const rentDate = document.getElementById('meta-rent-date').value;
+            const expireDate = document.getElementById('meta-expire-date').value;
+            const r = await fetch('/api/proxies/update-meta', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host, port, note, rent_date: rentDate, expire_date: expireDate })
+            }).then(x => x.json());
+            if (r.success) {
+                showToast('Đã lưu thông tin proxy');
+                bootstrap.Modal.getInstance(document.getElementById('proxyMetaModal')).hide();
+                loadProxies();
+            } else showToast('Lỗi: ' + r.error, 'danger');
+        }
+
+        async function deleteProxyConfirm() {
+            const host = document.getElementById('meta-proxy-host').value;
+            const port = document.getElementById('meta-proxy-port').value;
+            if (!confirm(`Xóa proxy ${host}:${port}?`)) return;
+            const r = await fetch('/api/proxies/delete', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host, port })
+            }).then(x => x.json());
+            if (r.success) {
+                showToast(`Đã xóa proxy ${host}:${port}`);
+                bootstrap.Modal.getInstance(document.getElementById('proxyMetaModal')).hide();
+                loadProxies();
+            } else showToast('Lỗi: ' + r.error, 'danger');
         }
 
         // ─── Login Batch ───
