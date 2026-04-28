@@ -296,6 +296,21 @@ async def connect_playwright(profile_id, url: str = None, proxy_str: str = ""):
         print("[ix_browser] Install playwright: pip install playwright && playwright install chromium")
         return None, None, None, None
 
+    # ── Check proxy alive trước khi mở browser ──
+    if proxy_str and proxy_str.strip():
+        parts = proxy_str.strip().split(":")
+        if len(parts) >= 2:
+            import socket
+            host, port_str = parts[0], parts[1]
+            try:
+                port_int = int(port_str)
+                sock = socket.create_connection((host, port_int), timeout=5)
+                sock.close()
+                print(f"[ix_browser] ✅ Proxy {host}:{port_int} alive — OK")
+            except Exception:
+                print(f"[ix_browser] ❌ Proxy {host}:{port_str} DEAD — bỏ qua profile {profile_id}")
+                return None, None, None, None
+
     # IP isolation: apply proxy trước khi open profile
     if proxy_str:
         _apply_account_proxy(profile_id, proxy_str)
